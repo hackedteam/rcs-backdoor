@@ -1,0 +1,32 @@
+#
+# Available name trace:
+#	:cookie - the cookie of the current session 
+#	:host   - the server for the sync
+
+log4r_config:
+  pre_config:
+    global:
+      level: DEBUG
+    root  :
+      level: DEBUG
+
+  loggers:
+    - name      : rcslogger
+      level     : DEBUG
+      additive  : 'false'
+      trace     : 'false'      
+      outputters:
+        - stderr
+   
+
+  outputters:
+    - type     : StderrOutputter
+      name     : stderr 
+      level    : DEBUG
+      formatter:
+      # take a look at this: http://log4r.rubyforge.org/rdoc/Log4r/PatternFormatter.html
+        date_pattern: '%Y-%m-%d %H:%M:%S'
+        pattern     : '%d [%l]: %x %m'
+        type        : PatternFormatter
+
+        
