@@ -6,9 +6,9 @@
 require_relative 'config.rb'
 
 # RCS::Common
-require 'common/trace'
-require 'common/crypt'
-require 'common/pascalize'
+require 'rcs-common/trace'
+require 'rcs-common/crypt'
+require 'rcs-common/pascalize'
 
 # System
 require 'ostruct'

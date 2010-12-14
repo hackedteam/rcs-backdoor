@@ -3,7 +3,7 @@
 #
 
 # RCS::Common
-require 'common/trace'
+require 'rcs-common/trace'
 
 # System
 require 'net/http'

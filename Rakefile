@@ -13,12 +13,13 @@ require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
   gem.name = "rcs-backdoor"
-  gem.homepage = "http://github.com/alor/rcs-backdoor"
-  gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.homepage = "http://www.hackingteam.it"
+  gem.license = "HT"
+  gem.summary = %Q{RCS backdoor}
+  gem.description = %Q{An implementation of an RCS backdoor in ruby}
   gem.email = "alor@hackingteam.it"
   gem.authors = ["ALoR"]
+  gem.executables << 'rcs-backdoor'
   # Include your dependencies below. Runtime dependencies are required when using your gem,
   # and development dependencies are only needed for development (ie running rake tasks, tests, etc)
   #  gem.add_runtime_dependency 'jabber4r', '> 0.1'

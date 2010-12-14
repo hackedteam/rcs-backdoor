@@ -3,8 +3,8 @@
 #
 
 # RCS::Common
-require 'common/trace'
-require 'common/crypt'
+require 'rcs-common/trace'
+require 'rcs-common/crypt'
 
 module RCS
   

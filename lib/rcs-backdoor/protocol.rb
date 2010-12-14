@@ -7,7 +7,7 @@ require_relative 'transport.rb'
 require_relative 'command.rb'
 
 # RCS::Common
-require 'common/trace'
+require 'rcs-common/trace'
 
 # System
 require 'ostruct'

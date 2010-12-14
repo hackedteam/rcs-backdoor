@@ -8,8 +8,8 @@ require_relative 'sync.rb'
 require_relative 'protocol.rb'
 
 # from RCS::Common
-require 'common/trace'
-require 'common/evidence'
+require 'rcs-common/trace'
+require 'rcs-common/evidence'
 
 # from System
 require 'digest/md5'
@@ -97,6 +97,17 @@ class Backdoor
     end
   end
 end
+
+# this module is used only form bin/rcs-backdoor as a wrapper to
+# execute the backdoor from command line
+module Application
+
+  def self.run!(*argv)
+    puts "ciao run" << argv.to_s
+    return 0
+  end
+
+end # Application::
 
 end # Backdoor::
 end # RCS::
