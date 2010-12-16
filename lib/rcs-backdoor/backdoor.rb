@@ -100,11 +100,42 @@ end
 
 # this module is used only form bin/rcs-backdoor as a wrapper to
 # execute the backdoor from command line
-module Application
+class Application
+  include RCS::Tracer
 
-  def self.run!(*argv)
-    puts "ciao run" << argv.to_s
+  def run(*argv)
+
+    # initialize the tracing facility
+    begin
+      trace_init Dir.pwd
+    rescue Exception => e
+      puts e
+      exit
+    end
+
+    begin
+      trace :info, "Creating the backdoor..."
+      b = RCS::Backdoor::Backdoor.new 'binary.yaml'
+
+      trace :info, "Creating fake logs..."
+      b.create_logs(5)
+
+      trace :info, "Synchronizing..."
+      b.sync RCS::Backdoor::Globals::SYNC_HOST
+
+    rescue Exception => detail
+      trace :fatal, "FAILURE: " << detail.to_s
+      return 1
+    end
+
+    # concluded successfully
     return 0
+  end
+
+  # since we cannot use trace from a class method
+  # we instantiate here an object and run it
+  def self.run!(*argv)
+    return Application.new.run(argv)
   end
 
 end # Application::
@@ -113,25 +144,5 @@ end # Backdoor::
 end # RCS::
 
 if __FILE__ == $0
-  include RCS::Tracer
-  trace_init Dir.pwd
-  
-  begin
-    trace :info, "Creating the backdoor..."
-    b = RCS::Backdoor::Backdoor.new RCS::Backdoor::Globals::BACKDOOR_ID, 
-                                    RCS::Backdoor::Globals::INSTANCE_ID, 
-                                    RCS::Backdoor::Globals::BACKDOOR_TYPE, 
-                                    RCS::Backdoor::Globals::CONF_KEY, 
-                                    RCS::Backdoor::Globals::SIGNATURE
-    
-    trace :info, "Creating fake logs..."
-    b.create_logs(5)
-    
-    trace :info, "Synchronizing..."
-    b.sync RCS::Backdoor::Globals::SYNC_HOST
-    
-  rescue Exception => detail
-    trace :fatal, "TRACE: " << detail.to_s
-    exit
-  end
+  RCS::Backdoor::Application.run!(*ARGV)
 end
