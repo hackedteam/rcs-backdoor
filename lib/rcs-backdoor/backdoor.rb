@@ -40,9 +40,6 @@ class Backdoor
   
   #setup all the backdoor parameters
   def initialize(binary_file, ident_file)
-    
-    # initialize the trace facility with the working directory
-    trace_init Dir.pwd
 
     binary = {}
 
@@ -111,13 +108,14 @@ class Backdoor
   
   # perform the synchronization with the server
   def sync(host)
+    #TODO: retrieve the log list
     @sync.perform host
   end
   
   # create some logs
-  def create_logs(num)
+  def create_logs(num, type='RANDOM')
     num.times do
-      @logs << Evidence.new
+      @logs << Evidence.new.generate(type)
     end
   end
 end
@@ -129,9 +127,19 @@ class Application
 
   def run(*argv)
 
+    # if we can't find the trace config file, default to the system one
+    if File.exist?('trace.yaml') then
+      typ = Dir.pwd
+      ty = 'trace.yaml'
+    else
+      typ = File.dirname(File.dirname(File.dirname(__FILE__))) + "/bin"
+      ty = typ + "/trace.yaml"
+      puts "Cannot find 'trace.yaml' using the default one (#{ty})"
+    end
+    
     # initialize the tracing facility
     begin
-      trace_init Dir.pwd
+      trace_init typ, ty
     rescue Exception => e
       puts e
       exit
@@ -141,11 +149,16 @@ class Application
       trace :info, "Creating the backdoor..."
       b = RCS::Backdoor::Backdoor.new 'binary.yaml', 'ident.yaml'
 
-      trace :info, "Creating fake logs..."
-      b.create_logs(5)
+      case argv[0]
+        when 'generate'
+          trace :info, "Creating fake evidences..."
+          b.create_logs(argv[1].to_i, argv[2])
 
-      trace :info, "Synchronizing..."
-      b.sync "192.168.100.100"
+        when 'sync'
+          trace :info, "Synchronizing..."
+          b.sync argv[1]
+
+      end
 
     rescue Exception => detail
       trace :fatal, "FAILURE: " << detail.to_s
@@ -159,7 +172,8 @@ class Application
   # since we cannot use trace from a class method
   # we instantiate here an object and run it
   def self.run!(*argv)
-    return Application.new.run(argv)
+    #TODO: command line validation
+    return Application.new.run(*argv)
   end
 
 end # Application::

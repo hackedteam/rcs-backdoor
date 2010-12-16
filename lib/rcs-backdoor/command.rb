@@ -305,7 +305,3 @@ end
 
 end # Backdoor::
 end # RCS::
-
-if __FILE__ == $0
-  # TODO Generated stub
-end

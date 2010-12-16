@@ -70,7 +70,7 @@ class Transport
       res = @http.request(request)
     end
     
-    trace :debug, "Cookie : " << res['Set-Cookie'] unless @cookie
+    trace :debug, "Cookie: " << res['Set-Cookie'] unless @cookie
     
     # save the cookie for later use
     @cookie = res['Set-Cookie']
@@ -92,7 +92,3 @@ end
 
 end # Backdoor::
 end # RCS::
-
-if __FILE__ == $0
-  # TODO Generated stub
-end
