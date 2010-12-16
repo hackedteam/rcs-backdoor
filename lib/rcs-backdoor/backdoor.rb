@@ -14,6 +14,7 @@ require 'rcs-common/evidence'
 require 'digest/md5'
 require 'ostruct'
 require 'yaml'
+require 'optparse'
 
 module RCS
 module Backdoor
@@ -113,7 +114,7 @@ class Backdoor
   end
   
   # create some logs
-  def create_logs(num, type='RANDOM')
+  def create_logs(num, type = :RANDOM)
     num.times do
       @logs << Evidence.new.generate(type)
     end
@@ -125,7 +126,7 @@ end
 class Application
   include RCS::Tracer
 
-  def run(*argv)
+  def run(options)
 
     # if we can't find the trace config file, default to the system one
     if File.exist?('trace.yaml') then
@@ -149,15 +150,14 @@ class Application
       trace :info, "Creating the backdoor..."
       b = RCS::Backdoor::Backdoor.new 'binary.yaml', 'ident.yaml'
 
-      case argv[0]
-        when 'generate'
-          trace :info, "Creating fake evidences..."
-          b.create_logs(argv[1].to_i, argv[2])
+      if options[:generate] then
+          trace :info, "Creating #{options[:gen_num]} fake evidences..."
+          b.create_logs(options[:gen_num], options[:gen_type])
+      end
 
-        when 'sync'
+      if options[:sync] then
           trace :info, "Synchronizing..."
-          b.sync argv[1]
-
+          b.sync options[:sync_host]
       end
 
     rescue Exception => detail
@@ -172,8 +172,36 @@ class Application
   # since we cannot use trace from a class method
   # we instantiate here an object and run it
   def self.run!(*argv)
-    #TODO: command line validation
-    return Application.new.run(*argv)
+    # This hash will hold all of the options parsed from the command-line by OptionParser.
+    options = {}
+
+    optparse = OptionParser.new do |opts|
+      # Set a banner, displayed at the top of the help screen.
+      opts.banner = "Usage: rcs-backdoor [options] arg1 arg2 ..."
+
+      # Define the options, and what they do
+      opts.on( '-g', '--generate NUM', Integer, 'Generate NUM evidences' ) do |num|
+        options[:generate] = true
+        options[:gen_num] = num
+      end
+      opts.on( '-t', '--type TYPE', [:RANDOM], 'Generate evidences of type TYPE' ) do |type|
+        options[:gen_type] = type
+      end
+      opts.on( '-s', '--sync HOST', 'Synchronize with remote HOST' ) do |host|
+        options[:sync] = true
+        options[:sync_host] = host
+      end
+
+      # This displays the help screen, all programs are assumed to have this option.
+      opts.on( '-h', '--help', 'Display this screen' ) do
+        puts opts
+        exit
+      end
+    end
+
+    optparse.parse(argv)
+    
+    return Application.new.run(options)
   end
 
 end # Application::
