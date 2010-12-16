@@ -115,7 +115,11 @@ class Application
 
     begin
       trace :info, "Creating the backdoor..."
-      b = RCS::Backdoor::Backdoor.new 'binary.yaml'
+      b = RCS::Backdoor::Backdoor.new ' RCS::Backdoor::Globals::BACKDOOR_ID, 
+                                    RCS::Backdoor::Globals::INSTANCE_ID, 
+                                    RCS::Backdoor::Globals::BACKDOOR_TYPE, 
+                                    RCS::Backdoor::Globals::CONF_KEY, 
+                                    RCS::Backdoor::Globals::SIGNATURE
 
       trace :info, "Creating fake logs..."
       b.create_logs(5)
