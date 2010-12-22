@@ -21,7 +21,7 @@ module Backdoor
 #
 # This is the Backdoor object
 # it needs the backdoor_id, instance and conf_key to be created
-# all thos parameters need to be passed as string taken from the db
+# all those parameters need to be passed as string taken from the db
 #
 class Backdoor
   include Tracer
@@ -37,7 +37,7 @@ class Backdoor
   attr_reader :deviceid
   attr_reader :sourceid
   
-  attr_reader :logs
+  attr_reader :evidences
   
   #setup all the backdoor parameters
   def initialize(binary_file, ident_file)
@@ -57,7 +57,7 @@ class Backdoor
     end
 
     # instantiate le empty log queue
-    @logs = []
+    @evidences = []
     
     # plain string 'RCS_000000000x'
     @id = binary['BACKDOOR_ID']
@@ -113,10 +113,10 @@ class Backdoor
     @sync.perform host
   end
   
-  # create some logs
-  def create_logs(num, type = :RANDOM)
+  # create some evidences
+  def create_evidences(num, type = :RANDOM)
     num.times do
-      @logs << Evidence.new.generate(type)
+      @evidences << Evidence.new.generate(type)
     end
   end
 end
@@ -152,7 +152,7 @@ class Application
 
       if options[:generate] then
           trace :info, "Creating #{options[:gen_num]} fake evidences..."
-          b.create_logs(options[:gen_num], options[:gen_type])
+          b.create_evidences(options[:gen_num], options[:gen_type])
       end
 
       if options[:sync] then
@@ -200,7 +200,7 @@ class Application
     end
 
     optparse.parse(argv)
-    
+
     return Application.new.run(options)
   end
 
