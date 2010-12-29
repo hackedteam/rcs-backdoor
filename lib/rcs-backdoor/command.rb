@@ -82,7 +82,7 @@ module Command
     
     # first 32 bytes are the Ks choosen by the server
     # decrypt it and store to create the session key along with Kd and Cb
-    ks = resp[0..31]
+    ks = resp.slice!(0..31)
     ks = aes_decrypt(ks, backdoor.signature)
     trace :debug, "Auth -- Ks: " << ks.unpack('H*').to_s
     
@@ -93,18 +93,17 @@ module Command
     trace :debug, "Auth -- K: " << @session_key.unpack('H*').to_s
     
     # second part of the server response contains the NOnce and the response
-    tmp = resp[32..resp.length]
-    tmp = aes_decrypt(tmp, @session_key)
+    tmp = aes_decrypt(resp, @session_key)
     
     # extract the NOnce and check if it is ok
     # this MUST be the same NOnce sent to the server, but since it is crypted
     # with the session key we know that the server knows Cb and thus is trusted
-    rnonce = tmp[0..15]
+    rnonce = tmp.slice!(0..15)
     trace :debug, "Auth -- rnonce: " << rnonce.unpack('H*').to_s
     raise "Invalid NOnce" unless nonce == rnonce
     
     # extract the response
-    response = tmp[16..20]
+    response = tmp
     trace :debug, "Auth -- Response: " << response.unpack('H*').to_s
     
     # print the response

@@ -70,7 +70,7 @@ class Transport
       res = @http.request(request)
     end
     
-    trace :debug, "Cookie: " << res['Set-Cookie'] unless @cookie
+    trace :debug, "Cookie: " << res['Set-Cookie'] unless @cookie.nil?
     
     # save the cookie for later use
     @cookie = res['Set-Cookie']
