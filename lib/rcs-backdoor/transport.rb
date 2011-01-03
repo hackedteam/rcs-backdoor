@@ -61,7 +61,7 @@ class Transport
     request['Content-Type'] = "application/octet-stream"
     
     # set the cookie if we already have it (got from the Auth phase)
-    request['Cookie'] = @cookie if @cookie != nil
+    request['Cookie'] = @cookie unless @cookie.nil?
     
     res = nil
     
@@ -70,10 +70,10 @@ class Transport
       res = @http.request(request)
     end
     
-    trace :debug, "Cookie: " << res['Set-Cookie'] unless @cookie.nil?
+    trace :debug, "Cookie: " << res['Set-Cookie'] unless res['Set-Cookie'].nil?
     
     # save the cookie for later use
-    @cookie = res['Set-Cookie']
+    @cookie = res['Set-Cookie'] unless res['Set-Cookie'].nil?
     
     trace_named_put(:cookie, @cookie)
     
