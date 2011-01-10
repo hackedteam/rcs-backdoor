@@ -10,6 +10,7 @@ module RCS
   
 class Config
   include Crypt
+  include RCS::Tracer
   @content = ""
   
   def initialize(backdoor, buff)

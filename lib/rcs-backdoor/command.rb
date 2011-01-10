@@ -112,7 +112,10 @@ module Command
       trace :info, "UNINSTALL received"
       raise "UNINSTALL"
     end
-    
+    if response.unpack('i') == [PROTO_NO] then
+      trace :info, "NO received"
+      raise "PROTO_NO: cannot continue"
+    end
   end
 
 
@@ -142,10 +145,12 @@ module Command
     
     # fill the available array
     if command == PROTO_OK then
-      trace :info, "ID Response: OK" 
-      diff_time = Time.new.to_i - time
+      trace :info, "ID Response: OK"
+      now = Time.now
+      now -= now.utc_offset 
+      diff_time = now.to_i - time
       trace :debug, "ID -- Server Time : " + time.to_s
-      trace :debug, "ID -- Local  Time : " + Time.new.to_i.to_s + " diff [#{diff_time}]"
+      trace :debug, "ID -- Local  Time : " + now.to_i.to_s + " diff [#{diff_time}]"
       if size != 0 then
         trace :debug, "ID -- available(#{size}): " + list.to_s
         available = list
