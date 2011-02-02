@@ -59,7 +59,10 @@ class Protocol
       
       # receive the new configuration
       receive_config @sync.backdoor if available.include? PROTO_CONF
-      
+
+      # receive the upgrade
+      receive_upgrade if available.include? PROTO_UPGRADE
+
       # receive the files in the upload queue
       receive_uploads if available.include? PROTO_UPLOAD
       

