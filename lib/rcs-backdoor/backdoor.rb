@@ -91,9 +91,9 @@ class Backdoor
     # we need to convert to binary
     @instance = [ident['INSTANCE_ID']].pack('H*')
 
-    @userid = ident['USERID']
-    @deviceid = ident['DEVICEID']
-    @sourceid = ident['SOURCEID']
+    @userid = ident['USERID'] || ''
+    @deviceid = ident['DEVICEID'] || ''
+    @sourceid = ident['SOURCEID'] || ''
 
     trace :debug, "Backdoor instantiated: " << @id << @instance.unpack('H*').to_s
 
