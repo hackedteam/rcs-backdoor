@@ -109,7 +109,6 @@ class Backdoor
   
   # perform the synchronization with the server
   def sync(host)
-    #TODO: retrieve the log list
     @sync.perform host
   end
   
