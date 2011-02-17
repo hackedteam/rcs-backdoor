@@ -8,6 +8,7 @@ require_relative 'protocol.rb'
 
 # from RCS::Common
 require 'rcs-common/trace'
+require 'rcs-common/crypt'
 require 'rcs-common/evidence'
 
 # from System
@@ -23,6 +24,7 @@ module Backdoor
 # it needs the backdoor_id, instance and conf_key to be created
 # all those parameters need to be passed as string taken from the db
 #
+
 class Backdoor
   include Tracer
   
@@ -30,6 +32,7 @@ class Backdoor
   attr_reader :instance
   attr_reader :type
   attr_reader :conf_key
+  attr_reader :log_key
   attr_reader :signature
   attr_reader :version
   
@@ -68,7 +71,11 @@ class Backdoor
     # the conf key is passed as a string taken from the db
     # we need to calculate the MD5 and use it in binary form
     @conf_key = Digest::MD5.digest binary['CONF_KEY']
-  
+    
+    # the log key is passed as a string taken from the db
+    # we need to calculate the MD5 and use it in binary form
+    @log_key = Digest::MD5.digest binary['LOG_KEY']
+    
     # the backdoor signature is passed as a string taken from the db
     # we need to calculate the MD5 and use it in binary form
     @signature = Digest::MD5.digest binary['SIGNATURE']
@@ -114,8 +121,9 @@ class Backdoor
   
   # create some evidences
   def create_evidences(num, type = :RANDOM)
+    info = { :log_key => @log_key, :device_id => @deviceid, :user_id => @userid, :source_id => @sourceid }
     num.times do
-      @evidences << Evidence.new.generate(type)
+      @evidences << Evidence.new(info).generate(type)
     end
   end
 end
@@ -183,7 +191,7 @@ class Application
         options[:generate] = true
         options[:gen_num] = num
       end
-      opts.on( '-t', '--type TYPE', [:RANDOM], 'Generate evidences of type TYPE' ) do |type|
+      opts.on( '-t', '--type TYPE', [:RANDOM, :DEVICE, :CALL], 'Generate evidences of type TYPE' ) do |type|
         options[:gen_type] = type
       end
       opts.on( '-s', '--sync HOST', 'Synchronize with remote HOST' ) do |host|
