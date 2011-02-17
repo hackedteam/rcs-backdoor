@@ -7,6 +7,7 @@ config = {'SYNC_HOST' => "192.168.1.169"}
 binary = {'BACKDOOR_ID'   => "RCS_0000000001",
           'BACKDOOR_TYPE' => "WIN32",
           'CONF_KEY'      => "-HcIbnSmrnaXFk6peeZJMx8HFcJPg9Hx",
+          'EVIDENCE_KEY'  => "Ez2vdMwu6VNQxsSj2OmUhbOzoPwsgJTP",
           'SIGNATURE'     => "4yeN5zu0+il3Jtcb5a1sBcAdjYFcsD9z",
           'VERSION'       => 2010121601
          }
