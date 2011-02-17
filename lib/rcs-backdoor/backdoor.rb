@@ -109,13 +109,23 @@ class Backdoor
   
   # perform the synchronization with the server
   def sync(host)
+    # retrieve the evidences from the local dir
+    Dir[Dir.pwd + '/evidences/*'].each do |f|
+      @evidences << Evidence.new.load_from_file(f)
+    end
+    
+    # perform the sync
     @sync.perform host
   end
   
   # create some evidences
   def create_evidences(num, type = :RANDOM)
+    # ensure the directory is created
+    Dir::mkdir(Dir.pwd + '/evidences') if not File.directory?(Dir.pwd + '/evidences')
+
+    # generate the evidences
     num.times do
-      @evidences << Evidence.new.generate(type)
+      Evidence.new.generate(type).dump_to_file(Dir.pwd + '/evidences')
     end
   end
 end
@@ -127,19 +137,21 @@ class Application
 
   def run(options)
 
+    load_path = ''
+
     # if we can't find the trace config file, default to the system one
     if File.exist?('trace.yaml') then
-      typ = Dir.pwd
+      load_path = Dir.pwd
       ty = 'trace.yaml'
     else
-      typ = File.dirname(File.dirname(File.dirname(__FILE__))) + "/bin"
-      ty = typ + "/trace.yaml"
+      load_path = File.dirname(File.dirname(File.dirname(__FILE__))) + "/bin"
+      ty = load_path + "/trace.yaml"
       puts "Cannot find 'trace.yaml' using the default one (#{ty})"
     end
     
     # initialize the tracing facility
     begin
-      trace_init typ, ty
+      trace_init load_path, ty
     rescue Exception => e
       puts e
       exit
@@ -147,7 +159,7 @@ class Application
 
     begin
       trace :info, "Creating the backdoor..."
-      b = RCS::Backdoor::Backdoor.new 'binary.yaml', 'ident.yaml'
+      b = RCS::Backdoor::Backdoor.new(load_path + '/binary.yaml', load_path + '/ident.yaml')
 
       if options[:generate] then
           trace :info, "Creating #{options[:gen_num]} fake evidences..."
@@ -159,8 +171,9 @@ class Application
           b.sync options[:sync_host]
       end
 
-    rescue Exception => detail
-      trace :fatal, "FAILURE: " << detail.to_s
+    rescue Exception => e
+      trace :fatal, "FAILURE: " << e.to_s
+      trace :fatal, "EXCEPTION: " + e.backtrace.join("\n")
       return 1
     end
 
@@ -183,7 +196,7 @@ class Application
         options[:generate] = true
         options[:gen_num] = num
       end
-      opts.on( '-t', '--type TYPE', [:RANDOM], 'Generate evidences of type TYPE' ) do |type|
+      opts.on( '-t', '--type TYPE', [:RANDOM, :DEVICE], 'Generate evidences of type TYPE' ) do |type|
         options[:gen_type] = type
       end
       opts.on( '-s', '--sync HOST', 'Synchronize with remote HOST' ) do |host|
