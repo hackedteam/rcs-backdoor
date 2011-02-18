@@ -135,6 +135,8 @@ module Command
     message += [backdoor.version].pack('I')
     message += backdoor.userid.pascalize + backdoor.deviceid.pascalize + backdoor.sourceid.pascalize
 
+    #trace :debug, "Ident: " << message.unpack('H*').to_s
+
     # send the message and receive the response from the server
     enc = aes_encrypt_integrity(message, @session_key)
     resp = @transport.message enc

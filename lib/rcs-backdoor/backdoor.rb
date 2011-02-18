@@ -108,7 +108,8 @@ class Backdoor
     @info = { :device_id => @deviceid, :user_id => @userid, :source_id => @sourceid }
 
     trace :debug, "Backdoor instantiated: " << @id << @instance.unpack('H*').to_s
-
+    trace :debug, "Backdoor ident: [#{@userid}] [#{@deviceid}] [#{@sourceid}]"
+    
     begin
       # instantiate the sync object with the protocol to be used
       # and a reference to the backdoor
@@ -155,22 +156,20 @@ class Application
   include RCS::Tracer
   
   def run(options)
-    
-    load_path = ''
 
     # if we can't find the trace config file, default to the system one
     if File.exist?('trace.yaml') then
       load_path = Dir.pwd
-      ty = 'trace.yaml'
+      trace_yaml = 'trace.yaml'
     else
       load_path = File.dirname(File.dirname(File.dirname(__FILE__))) + "/bin"
-      ty = load_path + "/trace.yaml"
-      puts "Cannot find 'trace.yaml' using the default one (#{ty})"
+      trace_yaml = load_path + "/trace.yaml"
+      puts "Cannot find 'trace.yaml' using the default one (#{trace_yaml})"
     end
     
     # initialize the tracing facility
     begin
-      trace_init load_path, ty
+      trace_init load_path, trace_yaml
     rescue Exception => e
       puts e
       exit
