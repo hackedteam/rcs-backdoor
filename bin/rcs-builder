@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
 
 require 'yaml'
 
@@ -14,7 +15,7 @@ binary = {'BACKDOOR_ID'   => "RCS_0000000001",
 
 ident = {'INSTANCE_ID' => "47170C3E047B6A910E7ECC2E987060DB2FF06CD8",
          'USERID'      => "ALoR",
-         'DEVICEID'    => "The One",
+         'DEVICEID'    => "スパイ",
          'SOURCEID'    => "192.168.1.175"
         }
 
