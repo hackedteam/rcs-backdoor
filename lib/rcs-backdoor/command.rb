@@ -292,7 +292,7 @@ module Command
     evidence = evidences.shift
     
     # prepare the message
-    message = [PROTO_EVIDENCE].pack('I') + [evidence.size].pack('I') + evidence.content.force_encoding("BINARY")
+    message = [PROTO_EVIDENCE].pack('I') + [evidence.size].pack('I') + evidence.content
     enc_msg = aes_encrypt_integrity(message, @session_key)
     # send the message and receive the response
     resp = @transport.message enc_msg
