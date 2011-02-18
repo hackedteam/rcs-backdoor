@@ -217,12 +217,12 @@ module Command
 
     # decode the response
     command, tot, left, size = resp.unpack('I4')
-
+    
     if command == PROTO_OK then
       filename = resp[12, resp.length].unpascalize
       bytes = resp[16 + size, resp.length].unpack('I')
       trace :info, "UPGRADE -- [#{filename}] #{bytes} bytes"
-
+      
       # recurse the request if there are other files to request
       receive_upgrade if left != 0
     else
@@ -287,7 +287,7 @@ module Command
   # ->  Crypt_K ( PROTO_EVIDENCE [ size, content ] )
   # <-  Crypt_K ( PROTO_OK | PROTO_NO )   
   def send_evidences(evidences)
-
+    
     return if evidences.empty?
     
     # take the first log
