@@ -63,6 +63,8 @@ class Transport
     # set the cookie if we already have it (got from the Auth phase)
     request['Cookie'] = @cookie unless @cookie.nil?
     
+    #request['X-Forwarded-For'] = '1.2.3.4'
+
     res = nil
     
     # fire !
@@ -74,7 +76,6 @@ class Transport
     
     # save the cookie for later use
     @cookie = res['Set-Cookie'] unless res['Set-Cookie'].nil?
-    
     trace_named_put(:cookie, @cookie)
     
     return res.body
