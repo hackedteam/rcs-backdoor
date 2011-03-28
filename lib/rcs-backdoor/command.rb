@@ -150,7 +150,6 @@ module Command
     if command == PROTO_OK then
       trace :info, "ID Response: OK"
       now = Time.now
-      now -= now.utc_offset 
       diff_time = now.to_i - time
       trace :debug, "ID -- Server Time : " + time.to_s
       trace :debug, "ID -- Local  Time : " + now.to_i.to_s + " diff [#{diff_time}]"

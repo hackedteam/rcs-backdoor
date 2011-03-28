@@ -66,7 +66,7 @@ class Transport
     #request['X-Forwarded-For'] = '1.2.3.4'
 
     res = nil
-    
+
     # fire !
     Timeout::timeout(10) do
       res = @http.request(request)
