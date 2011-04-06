@@ -143,9 +143,12 @@ class Backdoor
     evidence_path = Dir.pwd + @evidence_dir
     Dir::mkdir(evidence_path) if not File.directory?(evidence_path)
     
+    real_type = type
+
     # generate the evidence
     num.times do
-      Evidence.new(@evidence_key, @info).generate(type).dump_to_file(evidence_path)
+      real_type = RCS::EVIDENCE_TYPES.values.sample if type == :RANDOM
+      Evidence.new(@evidence_key, @info).generate(real_type).dump_to_file(evidence_path)
     end
   end
 end
@@ -204,7 +207,9 @@ class Application
   def self.run!(*argv)
     # This hash will hold all of the options parsed from the command-line by OptionParser.
     options = {}
-
+    
+    types = [:RANDOM] + RCS::EVIDENCE_TYPES.values
+    
     optparse = OptionParser.new do |opts|
       # Set a banner, displayed at the top of the help screen.
       opts.banner = "Usage: rcs-backdoor [options] arg1 arg2 ..."
@@ -214,14 +219,14 @@ class Application
         options[:generate] = true
         options[:gen_num] = num
       end
-      opts.on( '-t', '--type TYPE', [:RANDOM, :DEVICE, :CALL], 'Generate evidences of type TYPE' ) do |type|
+      opts.on( '-t', '--type TYPE', types, 'Generate evidences of type TYPE' ) do |type|
         options[:gen_type] = type
       end
       opts.on( '-s', '--sync HOST', 'Synchronize with remote HOST' ) do |host|
         options[:sync] = true
         options[:sync_host] = host
       end
-
+      
       # This displays the help screen, all programs are assumed to have this option.
       opts.on( '-h', '--help', 'Display this screen' ) do
         puts opts
