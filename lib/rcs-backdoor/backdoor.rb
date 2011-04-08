@@ -207,6 +207,8 @@ class Application
   def self.run!(*argv)
     # This hash will hold all of the options parsed from the command-line by OptionParser.
     options = {}
+
+    srand(Time.now.to_i)
     
     types = [:RANDOM] + RCS::EVIDENCE_TYPES.values
     
