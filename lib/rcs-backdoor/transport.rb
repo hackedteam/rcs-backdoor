@@ -47,6 +47,10 @@ class Transport
     # the HTTP connection (better to instantiate it here, only once)
     @http = Net::HTTP.new(@uri.host, @uri.port)
     @http.use_ssl = @ssl
+    # start the HTTP connection (needed for keep-alive option)
+    # without this, the connection will be closed after the first request
+    # see this: http://redmine.ruby-lang.org/issues/4522
+    @http.start
   end
 
   # every message is an HTTP POST request.
@@ -62,7 +66,10 @@ class Transport
     
     # set the cookie if we already have it (got from the Auth phase)
     request['Cookie'] = @cookie unless @cookie.nil?
-    
+
+    # keep the connection open for faster communication
+    request['Connection'] = 'Keep-Alive'
+
     #request['X-Forwarded-For'] = '1.2.3.4'
 
     res = nil
