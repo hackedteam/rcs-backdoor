@@ -15,9 +15,7 @@ class Config
   
   def initialize(backdoor, buff)
     @backdoor = backdoor
-    # TODO: remove this when the new config format will land on earth :)
-    # skip the first 8 bytes (the delta date)
-    @content = buff[8..-1] 
+    @content = buff
     trace :info, "Configuration size is #{@content.length}"
   end
   
