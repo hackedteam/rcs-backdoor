@@ -31,7 +31,7 @@ class Config
     # dump the configuration in clear
     str = './' + @backdoor.id + "_config.dec"
     f = File.new(str, File::CREAT | File::TRUNC | File::RDWR, 0644)
-    f.write aes_decrypt(@content, @backdoor.conf_key, PAD_NOPAD)
+    f.write aes_decrypt(@content, @backdoor.conf_key)
     f.close
     trace :debug, str + " created."
     
