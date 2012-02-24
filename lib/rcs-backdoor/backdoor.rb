@@ -100,7 +100,7 @@ class Backdoor
     # the instance is passed as a string taken from the db
     # we need to convert to binary
     @instance = [ident['INSTANCE_ID']].pack('H*')
-
+    
     @userid = ident['USERID'] || ''
     @deviceid = ident['DEVICEID'] || ''
     @sourceid = ident['SOURCEID'] || ''
@@ -122,14 +122,17 @@ class Backdoor
   
   # perform the synchronization with the server
   def sync(host)
+    trace :debug, "Loading evidences in memory ..."
     # retrieve the evidence from the local dir
     Dir[Dir.pwd + "#{@evidence_dir}/*"].each do |f|
       @evidences << Evidence.new(@evidence_key).load_from_file(f)
     end
-    
+
+    trace :debug, "Synchronizing ..."
     # perform the sync
     @sync.perform host
 
+    trace :debug, "Deleting evidences ..."
     # delete all evidence sent
     Dir[Dir.pwd + "#{@evidence_dir}/*"].each do |f|
       File.delete(f)
@@ -144,10 +147,11 @@ class Backdoor
     Dir::mkdir(evidence_path) if not File.directory?(evidence_path)
     
     real_type = type
-
+    
     # generate the evidence
     num.times do
-      real_type = RCS::EVIDENCE_TYPES.values.sample if type == :RANDOM
+      #real_type = RCS::EVIDENCE_TYPES.values.sample if type == :RANDOM
+      real_type = [:APPLICATION, :DEVICE, :CHAT, :CLIPBOARD, :CAMERA, :INFO, :KEYLOG, :SOCIAL].sample if type == :RANDOM
       Evidence.new(@evidence_key, @info).generate(real_type).dump_to_file(evidence_path)
     end
   end
@@ -181,17 +185,23 @@ class Application
     begin
       trace :info, "Creating the backdoor..."
       b = RCS::Backdoor::Backdoor.new(load_path + '/binary.yaml', load_path + '/ident.yaml')
-      
-      if options[:generate] then
-          trace :info, "Creating #{options[:gen_num]} fake evidences..."
-          b.create_evidences(options[:gen_num], options[:gen_type])
+
+      while true
+        if options[:generate] then
+            trace :info, "Creating #{options[:gen_num]} fake evidences..."
+            b.create_evidences(options[:gen_num], options[:gen_type])
+        end
+
+        if options[:sync] then
+            b.sync options[:sync_host]
+        end
+
+        break unless options[:loop]
+
+        trace :info, "Next synchronization in #{options[:loop_delay]} seconds ..."
+        sleep options[:loop_delay]
       end
-      
-      if options[:sync] then
-          trace :info, "Synchronizing..."
-          b.sync options[:sync_host]
-      end
-      
+
     rescue Exception => e
       trace :fatal, "FAILURE: " << e.to_s
       trace :fatal, "EXCEPTION: " + e.backtrace.join("\n")
@@ -227,6 +237,10 @@ class Application
       opts.on( '-s', '--sync HOST', 'Synchronize with remote HOST' ) do |host|
         options[:sync] = true
         options[:sync_host] = host
+      end
+      opts.on( '-l', '--loop DELAY', Integer, 'Loop synchronization every DELAY seconds') do |seconds|
+        options[:loop] = true
+        options[:loop_delay] = seconds
       end
       
       # This displays the help screen, all programs are assumed to have this option.

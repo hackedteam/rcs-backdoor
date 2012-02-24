@@ -17,6 +17,11 @@ class Transport
   
   def initialize(param)
     trace :debug, "Protocol initialized #{param}"
+    @host_param = param
+    init_host(param)
+  end
+
+  def init_host(param)
     case param
       when :HTTP
         @host = "http://"
@@ -27,15 +32,15 @@ class Transport
       else
         raise "Unsupported Transport"
     end
-    
   end
-  
+
   # connection to the remote host
   # for the REST protocol (HTTP) we don't have a persistent connection
   # to the sync server, just instantiate the objects here and make
   # an HTTP request every message
   def connect_to(host)
     Net::HTTP.version_1_2
+    init_host(@host_param)
     @host << host << "/service"
     
     trace_named_put(:host, @host)
