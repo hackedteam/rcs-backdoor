@@ -202,6 +202,9 @@ class Application
         sleep options[:loop_delay]
       end
 
+    rescue Interrupt
+      trace :info, "User asked to exit. Bye bye!"
+      return 0
     rescue Exception => e
       trace :fatal, "FAILURE: " << e.to_s
       trace :fatal, "EXCEPTION: " + e.backtrace.join("\n")
