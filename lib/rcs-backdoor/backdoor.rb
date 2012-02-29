@@ -152,7 +152,7 @@ class Backdoor
     num.times do
       #real_type = RCS::EVIDENCE_TYPES.values.sample if type == :RANDOM
       real_type = [:APPLICATION, :DEVICE, :CHAT, :CLIPBOARD, :CAMERA, :INFO, :KEYLOG, :SOCIAL].sample if type == :RANDOM
-      Evidence.new(@evidence_key, @info).generate(real_type).dump_to_file(evidence_path)
+      Evidence.new(@evidence_key).generate(real_type, @info).dump_to_file(evidence_path)
     end
   end
 end
