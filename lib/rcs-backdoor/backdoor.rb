@@ -13,6 +13,7 @@ require 'rcs-common/evidence'
 
 # from System
 require 'digest/md5'
+require 'digest/sha1'
 require 'ostruct'
 require 'yaml'
 require 'optparse'
@@ -151,7 +152,7 @@ class Backdoor
     # generate the evidence
     num.times do
       #real_type = RCS::EVIDENCE_TYPES.values.sample if type == :RANDOM
-      real_type = [:APPLICATION, :DEVICE, :CHAT, :CLIPBOARD, :CAMERA, :INFO, :KEYLOG, :SOCIAL].sample if type == :RANDOM
+      real_type = [:APPLICATION, :DEVICE, :CHAT, :CLIPBOARD, :CAMERA, :INFO, :KEYLOG, :SOCIAL, :SCREENSHOT].sample if type == :RANDOM
       Evidence.new(@evidence_key).generate(real_type, @info).dump_to_file(evidence_path)
     end
   end
@@ -161,6 +162,33 @@ end
 # execute the backdoor from command line
 class Application
   include RCS::Tracer
+
+  def run_backdoor(path_to_binary, path_to_ident, options)
+    b = RCS::Backdoor::Backdoor.new(path_to_binary, path_to_ident)
+
+    while true
+      if options[:generate] then
+        trace :info, "Creating #{options[:gen_num]} fake evidences..."
+        b.create_evidences(options[:gen_num], options[:gen_type])
+      end
+
+      if options[:sync] then
+        b.sync options[:sync_host]
+      end
+
+      break unless options[:loop]
+
+      trace :info, "Next synchronization in #{options[:loop_delay]} seconds ..."
+      sleep options[:loop_delay]
+    end
+  rescue Interrupt
+    trace :info, "User asked to exit. Bye bye!"
+    return 0
+  rescue Exception => e
+    trace :fatal, "FAILURE: " << e.to_s
+    trace :fatal, "EXCEPTION: " + e.backtrace.join("\n")
+    return 1
+  end
   
   def run(options)
 
@@ -182,35 +210,38 @@ class Application
       exit
     end
 
-    begin
-      trace :info, "Creating the backdoor..."
-      b = RCS::Backdoor::Backdoor.new(load_path + '/binary.yaml', load_path + '/ident.yaml')
-
-      while true
-        if options[:generate] then
-            trace :info, "Creating #{options[:gen_num]} fake evidences..."
-            b.create_evidences(options[:gen_num], options[:gen_type])
+    unless options[:randomize].nil?
+      binary = begin
+        File.open(load_path + '/ident.yaml', "r") do |f|
+          binary = YAML.load(f.read)
         end
-
-        if options[:sync] then
-            b.sync options[:sync_host]
-        end
-
-        break unless options[:loop]
-
-        trace :info, "Next synchronization in #{options[:loop_delay]} seconds ..."
-        sleep options[:loop_delay]
+      rescue
+        trace :fatal, "Cannot open binary patched file"
+        exit
       end
 
-    rescue Interrupt
-      trace :info, "User asked to exit. Bye bye!"
-      return 0
-    rescue Exception => e
-      trace :fatal, "FAILURE: " << e.to_s
-      trace :fatal, "EXCEPTION: " + e.backtrace.join("\n")
-      return 1
+      threads = []
+      options[:randomize].times do |n|
+        binary["INSTANCE_ID"] = Digest::SHA1.hexdigest(n.to_s).upcase
+        path_to_yaml = load_path + "/ident#{n}.yaml"
+        File.open(path_to_yaml, "w") {|f| f.write(binary.to_yaml)}
+        trace :info, "Spawned backdoor #{path_to_yaml}"
+        threads << Thread.new { run_backdoor(load_path + '/binary.yaml', path_to_yaml, options)}
+      end
+
+      begin
+        threads.each do |th|
+          th.join
+        end
+      rescue Interrupt
+        trace :info, "User asked to exit. Bye bye!"
+        return 0
+      end
+
+    else
+      run_backdoor(load_path + '/binary.yaml', load_path + '/ident.yaml', options)
     end
-    
+
     # concluded successfully
     return 0
   end
@@ -230,6 +261,9 @@ class Application
       opts.banner = "Usage: rcs-backdoor [options] arg1 arg2 ..."
 
       # Define the options, and what they do
+      opts.on( '-r', '--randomize NUM', Integer, 'Randomize NUM instances') do |num|
+        options[:randomize] = num
+      end
       opts.on( '-g', '--generate NUM', Integer, 'Generate NUM evidences' ) do |num|
         options[:generate] = true
         options[:gen_num] = num
