@@ -17,6 +17,7 @@ require 'digest/sha1'
 require 'ostruct'
 require 'yaml'
 require 'optparse'
+require 'fileutils'
 
 module RCS
 module Backdoor
@@ -60,9 +61,6 @@ class Backdoor
       exit
     end
 
-    # directory where evidence files are be stored
-    @evidence_dir = '/evidence'
-
     # instantiate le empty log queue
     @evidences = []
     
@@ -101,6 +99,9 @@ class Backdoor
     # the instance is passed as a string taken from the db
     # we need to convert to binary
     @instance = [ident['INSTANCE_ID']].pack('H*')
+
+    # directory where evidence files are be stored
+    @evidence_dir = File.join(Dir.pwd, 'evidence', ident['INSTANCE_ID'])
     
     @userid = ident['USERID'] || ''
     @deviceid = ident['DEVICEID'] || ''
@@ -125,7 +126,7 @@ class Backdoor
   def sync(host)
     trace :debug, "Loading evidences in memory ..."
     # retrieve the evidence from the local dir
-    Dir[Dir.pwd + "#{@evidence_dir}/*"].each do |f|
+    Dir["#{@evidence_dir}/*"].each do |f|
       @evidences << Evidence.new(@evidence_key).load_from_file(f)
     end
 
@@ -135,7 +136,7 @@ class Backdoor
 
     trace :debug, "Deleting evidences ..."
     # delete all evidence sent
-    Dir[Dir.pwd + "#{@evidence_dir}/*"].each do |f|
+    Dir["#{@evidence_dir}/*"].each do |f|
       File.delete(f)
     end
     
@@ -144,8 +145,10 @@ class Backdoor
   # create some evidences
   def create_evidences(num, type = :RANDOM)
     # ensure the directory is created
-    evidence_path = Dir.pwd + @evidence_dir
-    Dir::mkdir(evidence_path) if not File.directory?(evidence_path)
+
+    FileUtils.rm_rf(@evidence_dir)
+
+    Dir::mkdir(@evidence_dir) if not File.directory?(@evidence_dir)
     
     real_type = type
     
@@ -153,7 +156,7 @@ class Backdoor
     num.times do
       #real_type = RCS::EVIDENCE_TYPES.values.sample if type == :RANDOM
       real_type = [:APPLICATION, :DEVICE, :CHAT, :CLIPBOARD, :CAMERA, :INFO, :KEYLOG, :SOCIAL, :SCREENSHOT].sample if type == :RANDOM
-      Evidence.new(@evidence_key).generate(real_type, @info).dump_to_file(evidence_path)
+      Evidence.new(@evidence_key).generate(real_type, @info).dump_to_file(@evidence_dir)
     end
   end
 end
