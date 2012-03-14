@@ -123,7 +123,7 @@ class Backdoor
   end
   
   # perform the synchronization with the server
-  def sync(host)
+  def sync(host, delete_evidence = true)
     trace :debug, "Loading evidences in memory ..."
     # retrieve the evidence from the local dir
     Dir["#{@evidence_dir}/*"].each do |f|
@@ -134,12 +134,14 @@ class Backdoor
     # perform the sync
     @sync.perform host
 
-    trace :debug, "Deleting evidences ..."
-    # delete all evidence sent
-    Dir["#{@evidence_dir}/*"].each do |f|
-      File.delete(f)
+    if delete_evidence
+      trace :debug, "Deleting evidences ..."
+      # delete all evidence sent
+      Dir["#{@evidence_dir}/*"].each do |f|
+        File.delete(f)
+      end
     end
-    
+
   end
   
   # create some evidences
@@ -148,14 +150,14 @@ class Backdoor
 
     FileUtils.rm_rf(@evidence_dir)
 
-    Dir::mkdir(@evidence_dir) if not File.directory?(@evidence_dir)
+    FileUtils.mkpath(@evidence_dir) if not File.directory?(@evidence_dir)
     
     real_type = type
     
     # generate the evidence
     num.times do
       #real_type = RCS::EVIDENCE_TYPES.values.sample if type == :RANDOM
-      real_type = [:APPLICATION, :DEVICE, :CHAT, :CLIPBOARD, :CAMERA, :INFO, :KEYLOG, :SOCIAL, :SCREENSHOT].sample if type == :RANDOM
+      real_type = [:APPLICATION, :DEVICE, :CHAT, :CLIPBOARD, :CAMERA, :INFO, :KEYLOG, :SOCIAL, :SCREENSHOT, :MOUSE, :FILEOPEN, :FILECAP].sample if type == :RANDOM
       Evidence.new(@evidence_key).generate(real_type, @info).dump_to_file(@evidence_dir)
     end
   end
@@ -169,14 +171,14 @@ class Application
   def run_backdoor(path_to_binary, path_to_ident, options)
     b = RCS::Backdoor::Backdoor.new(path_to_binary, path_to_ident)
 
-    while true
-      if options[:generate] then
-        trace :info, "Creating #{options[:gen_num]} fake evidences..."
-        b.create_evidences(options[:gen_num], options[:gen_type])
-      end
+    if options[:generate] then
+      trace :info, "Creating #{options[:gen_num]} fake evidences..."
+      b.create_evidences(options[:gen_num], options[:gen_type])
+    end
 
+    while true
       if options[:sync] then
-        b.sync options[:sync_host]
+        b.sync options[:sync_host], false
       end
 
       break unless options[:loop]
