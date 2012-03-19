@@ -175,16 +175,18 @@ class Application
       trace :info, "Creating #{options[:gen_num]} fake evidences..."
       b.create_evidences(options[:gen_num], options[:gen_type])
     end
-
+    
     while true
       if options[:sync] then
-        b.sync options[:sync_host], false
+        b.sync options[:sync_host], !(options[:randomize] or options[:loop]) # delete evidences if not randomizing
       end
-
+      
       break unless options[:loop]
-
-      trace :info, "Next synchronization in #{options[:loop_delay]} seconds ..."
-      sleep options[:loop_delay]
+      
+      options[:loop_delay].times do |n|
+        sleep 1
+        trace :info, "#{options[:loop_delay] - n} seconds to next synchronization." if n % 5 == 0
+      end 
     end
   rescue Interrupt
     trace :info, "User asked to exit. Bye bye!"
