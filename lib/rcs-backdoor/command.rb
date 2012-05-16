@@ -339,7 +339,7 @@ module Command
     resp = send_command(PROTO_PURGE)
 
     # decode the response
-    command, time, size = resp.unpack('I3')
+    command, len, time, size = resp.unpack('IIQI')
 
     if command == PROTO_OK
       trace :info, "PURGE -- [#{Time.at(time)}] #{size} bytes"
