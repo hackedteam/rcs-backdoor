@@ -60,6 +60,9 @@ class Protocol
       # receive the new configuration
       receive_config @sync.backdoor if available.include? PROTO_CONF
 
+      # ask for the purge
+      receive_purge if available.include? PROTO_PURGE
+
       # receive the upgrade
       receive_upgrade if available.include? PROTO_UPGRADE
 

