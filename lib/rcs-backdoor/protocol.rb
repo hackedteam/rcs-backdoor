@@ -68,7 +68,10 @@ class Protocol
 
       # receive the files in the upload queue
       receive_uploads if available.include? PROTO_UPLOAD
-      
+
+      # receive the list of commands to be executed
+      receive_exec if available.include? PROTO_EXEC
+
       # receive the list of files to be downloaded
       receive_downloads if available.include? PROTO_DOWNLOAD
       

