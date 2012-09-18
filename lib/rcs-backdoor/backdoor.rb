@@ -43,6 +43,8 @@ class Backdoor
   attr_reader :sourceid
   
   attr_reader :evidences
+
+  attr_accessor :scout
   
   #setup all the backdoor parameters
   def initialize(binary_file, ident_file)
@@ -111,7 +113,9 @@ class Backdoor
 
     trace :debug, "Backdoor instantiated: " << @id << @instance.unpack('H*').to_s
     trace :debug, "Backdoor ident: [#{@userid}] [#{@deviceid}] [#{@sourceid}]"
-    
+
+    @scout = false
+
     begin
       # instantiate the sync object with the protocol to be used
       # and a reference to the backdoor
@@ -170,6 +174,9 @@ class Application
 
   def run_backdoor(path_to_binary, path_to_ident, options)
     b = RCS::Backdoor::Backdoor.new(path_to_binary, path_to_ident)
+
+    # set the scout flag if specified
+    b.scout = true if options[:scout]
 
     if options[:generate] then
       trace :info, "Creating #{options[:gen_num]} fake evidences..."
@@ -286,7 +293,10 @@ class Application
         options[:loop] = true
         options[:loop_delay] = seconds
       end
-      
+      opts.on( '--scout', 'Auth like a scout' ) do
+        options[:scout] = true
+      end
+
       # This displays the help screen, all programs are assumed to have this option.
       opts.on( '-h', '--help', 'Display this screen' ) do
         puts opts
