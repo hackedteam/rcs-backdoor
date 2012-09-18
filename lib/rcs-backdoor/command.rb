@@ -137,11 +137,12 @@ module Command
   end
 
   # Authentication phase
-  # ->  Base64 ( Crypt_C ( Pver, Kd, sha(Kc | Kd), BuildId, InstanceId, Platform ) )
+  # ->  Base64 ( Crypt_S ( Pver, Kd, sha(Kc | Kd), BuildId, InstanceId, Platform ) )
   # <-  Base64 ( Crypt_C ( Ks, sha(K), Response ) )  |  SetCookie ( SessionCookie )
   def authenticate_scout(backdoor)
     trace :info, "AUTH SCOUT"
 
+    # the version of the protocol
     pver = [1].pack('I')
 
     # first part of the session key, chosen by the client
