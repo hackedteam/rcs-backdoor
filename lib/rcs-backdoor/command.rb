@@ -176,14 +176,14 @@ module Command
     enc_msg += SecureRandom.random_bytes(rand(128..1024))
 
     # add the base64 container
-    enc_msg = Base64.encode64(enc_msg)
+    enc_msg = Base64.strict_encode64(enc_msg)
 
     # send the message and receive the response from the server
     # the transport layer will take care of the underlying cookie
     resp = @transport.message enc_msg
 
     # remove the base64 container
-    resp = Base64.decode64(resp)
+    resp = Base64.strict_decode64(resp)
 
     # align to the multiple of 16
     resp = normalize(resp)
