@@ -43,6 +43,9 @@ class Protocol
   def perform(host)
 
     begin
+
+      start = Time.now
+
       # connection to the remote host
       @transport.connect_to host
       
@@ -89,7 +92,9 @@ class Protocol
       
       # clean up
       @transport.disconnect
-      
+
+      trace :warn, "Total Time is #{Time.now - start} sec"
+
     rescue Exception => detail
       trace :fatal, "ERROR: " << detail.to_s
       raise
