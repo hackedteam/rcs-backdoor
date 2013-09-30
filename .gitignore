@@ -48,3 +48,6 @@ Gemfile.lock
 
 #evidences
 evidence
+
+# RVM gemset
+.ruby-gemset
