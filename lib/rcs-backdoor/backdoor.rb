@@ -47,21 +47,12 @@ class Backdoor
   attr_accessor :scout
   
   #setup all the backdoor parameters
-  def initialize(binary_file, ident_file)
+  def initialize(binary_file, ident_file, options = {})
+    @options = options
 
-    binary = {}
-
-    trace :debug, "Parsing binary data..."
-    
     # parse the parameters from the binary patched constants
-    begin
-      File.open(binary_file, "r") do |f|
-        binary = YAML.load(f.read)
-      end
-    rescue
-      trace :fatal, "Cannot open binary patched file"
-      exit
-    end
+    trace :debug, "Parsing binary data..."
+    binary = load_yaml(binary_file)
 
     # instantiate le empty log queue
     @evidences = []
@@ -87,17 +78,8 @@ class Backdoor
     # the backdoor version
     @version = binary['VERSION']
     
-    # STUB ! (move to another place) used to identify the target
-    ident = {}
+    ident = load_yaml(ident_file)
 
-    begin
-      File.open(ident_file, "r") do |f|
-        ident = YAML.load(f.read)
-      end
-    rescue
-      trace :fatal, "Cannot open binary patched file"
-      exit
-    end
     # the instance is passed as a string taken from the db
     # we need to convert to binary
     @instance = [ident['INSTANCE_ID']].pack('H*')
@@ -125,7 +107,21 @@ class Backdoor
       raise
     end
   end
-  
+
+  def load_yaml(path)
+    File.open(path, "r") do |f|
+      hash = YAML.load(f.read)
+      is_single_config = hash.keys.include?("INSTANCE_ID")
+      return hash if is_single_config
+      config_name = @options[:config_name] || "default"
+      hash[config_name] || raise("Unable to find configuration #{config_name.inspect} in file #{File.basename(path)}")
+      return hash[config_name]
+    end
+  rescue Exception => ex
+    trace :fatal, "Cannot load yaml file #{File.basename(path)}: #{ex.message}"
+    exit(1)
+  end
+
   # perform the synchronization with the server
   def sync(host, delete_evidence = true)
     trace :debug, "Loading evidences in memory ..."
@@ -173,7 +169,7 @@ class Application
   include RCS::Tracer
 
   def run_backdoor(path_to_binary, path_to_ident, options)
-    b = RCS::Backdoor::Backdoor.new(path_to_binary, path_to_ident)
+    b = RCS::Backdoor::Backdoor.new(path_to_binary, path_to_ident, options)
 
     # set the scout flag if specified
     b.scout = true if options[:scout]
@@ -292,6 +288,9 @@ class Application
       opts.on( '-l', '--loop DELAY', Integer, 'Loop synchronization every DELAY seconds') do |seconds|
         options[:loop] = true
         options[:loop_delay] = seconds
+      end
+      opts.on( '-c', '--config CONFIGURATION', String, 'Configuration/environment name') do |value|
+        options[:config_name] = value
       end
       opts.on( '--scout', 'Auth like a scout' ) do
         options[:scout] = true
