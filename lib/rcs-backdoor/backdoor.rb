@@ -79,7 +79,7 @@ class Backdoor
     @version = binary['VERSION']
     
     ident = load_yaml(ident_file)
-
+    ident['INSTANCE_ID'] = ident['INSTANCE_ID'][0..-((@options[:tag].size)+2)]+"_"+@options[:tag] if @options[:tag]
     # the instance is passed as a string taken from the db
     # we need to convert to binary
     @instance = [ident['INSTANCE_ID']].pack('H*')
@@ -284,6 +284,9 @@ class Application
       opts.on( '-s', '--sync HOST', 'Synchronize with remote HOST' ) do |host|
         options[:sync] = true
         options[:sync_host] = host
+      end
+      opts.on('--tag STRING', 'Append to instance string' ) do |tag|
+        options[:tag] = tag
       end
       opts.on( '-l', '--loop DELAY', Integer, 'Loop synchronization every DELAY seconds') do |seconds|
         options[:loop] = true

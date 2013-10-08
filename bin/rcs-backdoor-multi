@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+BINPATH = File.join(File.dirname(__FILE__), 'rcs-backdoor')
+
+count = ARGV[0].to_i
+
+exit(1) if count <= 0
+
+args_for_backdoor = ARGV[1..-1].join(' ')
+
+  require 'colorize'
+
+$threads = []
+
+count.times do |i|
+
+  $threads << Thread.new do
+    # puts "Thread #{i}: sleeping".colorize(:red)
+    # sleep(rand(0..15))
+
+    cmd = "#{BINPATH} #{args_for_backdoor} --tag #{i}"
+    puts "Thread #{i}: #{cmd}".colorize(:yellow)
+    system(cmd)
+  end
+end
+
+
+$threads.map &:join
+
+puts "done!"

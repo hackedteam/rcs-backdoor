@@ -80,7 +80,7 @@ class Transport
     res = nil
 
     # fire !
-    Timeout::timeout(10) do
+    Timeout::timeout(60) do
       res = @http.request(request)
     end
     
