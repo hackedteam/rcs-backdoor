@@ -14,7 +14,10 @@ module Backdoor
 
 class Transport
   include Tracer
-  
+
+  OPEN_TIMEOUT = 600
+  READ_TIMEOUT = 600
+
   def initialize(param)
     trace :debug, "Protocol initialized #{param}"
     @host_param = param
@@ -52,6 +55,8 @@ class Transport
     # the HTTP connection (better to instantiate it here, only once)
     @http = Net::HTTP.new(@uri.host, @uri.port)
     @http.use_ssl = @ssl
+    @http.open_timeout = OPEN_TIMEOUT
+    @http.read_timeout = READ_TIMEOUT
     # start the HTTP connection (needed for keep-alive option)
     # without this, the connection will be closed after the first request
     # see this: http://redmine.ruby-lang.org/issues/4522
@@ -80,7 +85,7 @@ class Transport
     res = nil
 
     # fire !
-    Timeout::timeout(60) do
+    Timeout::timeout(READ_TIMEOUT) do
       res = @http.request(request)
     end
     
