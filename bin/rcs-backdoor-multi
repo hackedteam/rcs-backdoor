@@ -14,8 +14,8 @@ $threads = []
 count.times do |i|
 
   $threads << Thread.new do
-    # puts "Thread #{i}: sleeping".colorize(:red)
-    # sleep(rand(0..15))
+    puts "Thread #{i}: sleeping".colorize(:red)
+    sleep(rand(0..30))
 
     cmd = "#{BINPATH} #{args_for_backdoor} --tag #{i}"
     puts "Thread #{i}: #{cmd}".colorize(:yellow)
