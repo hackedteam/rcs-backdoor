@@ -7,23 +7,19 @@ exit(1) if count <= 0
 
 args_for_backdoor = ARGV[1..-1].join(' ')
 
-  require 'colorize'
+require 'colorize'
 
 $threads = []
 
 count.times do |i|
-
   $threads << Thread.new do
     puts "Thread #{i}: sleeping".colorize(:red)
     sleep(rand(0..30))
 
-    cmd = "#{BINPATH} #{args_for_backdoor} --tag #{i}"
+    cmd = "#{BINPATH} #{args_for_backdoor} --tag TAG#{i}"
     puts "Thread #{i}: #{cmd}".colorize(:yellow)
     system(cmd)
   end
 end
 
-
 $threads.map &:join
-
-puts "done!"
