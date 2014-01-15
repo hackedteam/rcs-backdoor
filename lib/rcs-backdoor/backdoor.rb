@@ -45,7 +45,8 @@ class Backdoor
   attr_reader :evidences
 
   attr_accessor :scout
-  
+  attr_accessor :soldier
+
   #setup all the backdoor parameters
   def initialize(binary_file, ident_file, options = {})
     @options = options
@@ -173,6 +174,7 @@ class Application
 
     # set the scout flag if specified
     b.scout = true if options[:scout]
+    b.soldier = true if options[:soldier]
 
     if options[:generate] then
       trace :info, "Creating #{options[:gen_num]} fake evidences..."
@@ -297,6 +299,9 @@ class Application
       end
       opts.on( '--scout', 'Auth like a scout' ) do
         options[:scout] = true
+      end
+      opts.on( '--soldier', 'Auth like a soldier' ) do
+        options[:soldiers] = true
       end
 
       # This displays the help screen, all programs are assumed to have this option.

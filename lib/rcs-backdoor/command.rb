@@ -46,7 +46,7 @@ module Command
 
   def authenticate(backdoor)
     # use the correct auth packet
-    backdoor.scout ? authenticate_scout(backdoor) : authenticate_elite(backdoor)
+    (backdoor.scout or backdoor.soldier) ? authenticate_scout(backdoor) : authenticate_elite(backdoor)
   end
 
   # Authentication phase
@@ -158,10 +158,11 @@ module Command
     # the id and the type are padded to 16 bytes
     rcs_id = backdoor.id.ljust(16, "\x00")
     demo = (backdoor.type.end_with? '-DEMO') ? "\x01" : "\x00"
-    scout = "\x01"
+    level = "\x01" if backdoor.scout
+    level = "\x02" if backdoor.soldier
     flags = "\x00"
 
-    platform = [PLATFORMS.index(backdoor.type.gsub(/-DEMO/, ''))].pack('C') + demo + scout + flags
+    platform = [PLATFORMS.index(backdoor.type.gsub(/-DEMO/, ''))].pack('C') + demo + level + flags
 
     trace :debug, "Auth -- #{backdoor.type} " << platform.unpack('H*').to_s
 
