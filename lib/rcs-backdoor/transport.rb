@@ -57,6 +57,7 @@ class Transport
     @http.use_ssl = @ssl
     @http.open_timeout = OPEN_TIMEOUT
     @http.read_timeout = READ_TIMEOUT
+    #@http.set_debug_output $stderr
     # start the HTTP connection (needed for keep-alive option)
     # without this, the connection will be closed after the first request
     # see this: http://redmine.ruby-lang.org/issues/4522
