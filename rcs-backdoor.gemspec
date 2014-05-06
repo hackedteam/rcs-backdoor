@@ -23,4 +23,6 @@ Gem::Specification.new do |s|
   s.add_dependency "mail"
   s.add_dependency "log4r", ">= 1.1.9"
   s.add_dependency "rcs-common"
+  s.add_dependency "bdb"
+  s.add_dependency "sbdb"
 end

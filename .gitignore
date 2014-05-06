@@ -51,3 +51,6 @@ evidence
 
 # RVM gemset
 .ruby-gemset
+
+*_config.dec
+*_config.enc
