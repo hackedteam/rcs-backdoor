@@ -17,3 +17,5 @@ task :clean do
     end
   end
 end
+
+Rake::Task["release"].clear
